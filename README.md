@@ -2,72 +2,164 @@
 
 **最干净的 OpenClaw Docker 镜像** — 自动跟踪官方 release，多架构支持，一键拉取，开箱即用。
 
-## 特性
+## 镜像列表
 
-- ✅ **自动跟踪官方版本** — 每小时检查 OpenClaw 官方 release，自动构建新版本
-- ✅ **多架构支持** — 同时支持 `amd64`（Intel/AMD）和 `arm64`（Apple Silicon / Raspberry Pi）
-- ✅ **中文 Release Notes** — 每个版本的更新说明翻译成中文，便于阅读
-- ✅ **内置浏览器支持** — 预装 Playwright Chromium，支持自动化场景
-- ✅ **干净构建** — 使用官方 Dockerfile，无任何修改
+| 镜像 | 标签 | 用途 | 大小 |
+|------|------|------|------|
+| 主镜像 | `ghcr.io/ashj-yf/openclaw-docker:latest` | OpenClaw 主程序 | ~1.2GB |
+| Sandbox | `ghcr.io/ashj-yf/openclaw-docker:sandbox` | 基础沙盒容器 | ~200MB |
+| Sandbox Browser | `ghcr.io/ashj-yf/openclaw-docker:sandbox-browser` | 带浏览器的沙盒 | ~800MB |
+| Sandbox Common | `ghcr.io/ashj-yf/openclaw-docker:sandbox-common` | 完整开发环境沙盒 | ~2GB |
+
+所有镜像支持 `amd64` 和 `arm64` 架构。
 
 ## 快速开始
 
+### 使用 Docker Compose（推荐）
+
 ```bash
-# 拉取最新版本
-docker pull <registry>/openclaw:latest
+# 下载 docker-compose.yml
+curl -O https://raw.githubusercontent.com/ashj-yf/openclaw-docker/main/docker-compose.yml
+
+# 启动主服务
+docker compose --profile main up -d
+
+# 查看日志
+docker compose logs -f openclaw
+
+# 停止服务
+docker compose down
+```
+
+### 启动不同服务
+
+```bash
+# 主服务
+docker compose --profile main up -d
+
+# 基础 Sandbox
+docker compose --profile sandbox up -d
+
+# 带浏览器的 Sandbox（支持 VNC 访问）
+docker compose --profile sandbox-browser up -d
+
+# 完整开发环境 Sandbox
+docker compose --profile sandbox-common up -d
+
+# 启动所有服务
+docker compose --profile all up -d
+```
+
+### 使用 Docker 命令
+
+```bash
+# 拉取镜像
+docker pull ghcr.io/ashj-yf/openclaw-docker:latest
 
 # 运行容器
 docker run -d --name openclaw \
   -p 18789:18789 \
-  <registry>/openclaw:latest
+  -v openclaw-data:/app/data \
+  ghcr.io/ashj-yf/openclaw-docker:latest
 
 # 查看日志
 docker logs -f openclaw
 ```
 
+## 本地构建
+
+### 前置要求
+
+- Docker 24.0+
+- Docker Buildx
+- 多架构支持需要 QEMU
+
+### 使用构建脚本
+
+```bash
+# 克隆仓库
+git clone https://github.com/ashj-yf/openclaw-docker.git
+cd openclaw-docker
+
+# 赋予执行权限
+chmod +x build.sh
+
+# 本地构建所有镜像
+./build.sh
+
+# 构建指定版本
+./build.sh v2026.4.9
+
+# 构建并推送到 ghcr.io
+PUSH=true ./build.sh v2026.4.9
+
+# 使用指定 OpenClaw 版本源码
+OPENCLAW_VERSION=v2026.4.9 ./build.sh
+```
+
+### 使用 Docker Compose 本地构建
+
+```bash
+# 设置源码目录
+export OPENCLAW_SRC=./openclaw-src
+
+# 下载源码（首次）
+curl -sL https://api.github.com/repos/openclaw/openclaw/tarball/latest | tar -xzf - -C openclaw-src --strip-components=1
+
+# 构建并启动
+docker compose --profile main up -d --build
+```
+
+## 服务说明
+
+### 主服务 (openclaw)
+
+OpenClaw 主程序，提供 AI 助手功能。
+
+- **端口**: 18789
+- **健康检查**: `/healthz`
+- **数据持久化**: `/app/data`, `/app/skills`
+
+### Sandbox
+
+基础沙盒容器，用于安全执行代码。
+
+- 基于 Debian bookworm-slim
+- 包含基础工具：bash, curl, git, jq, python3, ripgrep
+
+### Sandbox Browser
+
+带浏览器的沙盒，支持自动化浏览器操作。
+
+- **端口**:
+  - 9222: Chrome DevTools Protocol
+  - 5900: VNC
+  - 6080: noVNC (Web VNC)
+- 包含 Chromium 浏览器
+- 支持 VNC 远程访问
+
+### Sandbox Common
+
+完整开发环境沙盒，包含：
+
+- Node.js, npm, pnpm
+- Python 3
+- Go, Rust
+- Bun
+- Homebrew
+
+## 环境变量
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `IMAGE_REGISTRY` | `ghcr.io` | 镜像 Registry |
+| `IMAGE_REPO` | `ashj-yf/openclaw-docker` | 仓库名称 |
+| `IMAGE_TAG` | `latest` | 镜像标签 |
+| `OPENCLAW_VERSION` | `latest` | OpenClaw 源码版本 |
+
 ## 版本列表
 
 所有版本发布请查看 [Releases 页面](../../releases)。
-
-每个 release 包含：
-- 中文版更新说明
-- 镜像下载地址
-- 架构信息
-- 快速使用命令
-
-## 配置说明
-
-### Registry 配置
-
-镜像推送目标通过 GitHub Secrets 配置：
-
-| Secret | 说明 | 示例 |
-|--------|------|------|
-| `DOCKER_REGISTRY` | Registry 地址 | `docker.io` / `ghcr.io` |
-| `DOCKER_USERNAME` | Registry 用户名 | `yourusername` |
-| `DOCKER_PASSWORD` | Registry 密码/Token | `xxx` |
-| `DOCKER_IMAGE_NAME` | 镜像名称（可选） | `openclaw` |
-
-### 翻译配置（可选）
-
-如需启用 release notes 中文翻译，配置：
-
-| Secret | 说明 |
-|--------|------|
-| `ANTHROPIC_API_KEY` | Claude API Key |
-
-未配置时，release notes 将保留英文原文。
-
-## 手动触发构建
-
-在 Actions 页面可以手动触发 `build-image.yml` workflow，指定版本号进行构建。
-
-## 架构说明
-
-镜像使用官方 Dockerfile 构建，基础镜像为 `node:24-bookworm`，包含：
-- Node.js 24 运行时
-- Playwright Chromium（用于浏览器自动化）
-- Docker CLI（可选，用于容器管理）
 
 ## 许可证
 
