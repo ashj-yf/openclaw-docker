@@ -14,6 +14,7 @@ import base64
 import hashlib
 import hmac
 import os
+import re
 import sys
 import time
 import urllib.parse
@@ -29,23 +30,15 @@ def percent_encode(s: str) -> str:
 
 def sign(params: dict, access_key_secret: str) -> str:
     """生成阿里云 API 签名"""
-    # 排序参数
     sorted_params = sorted(params.items())
-
-    # 构建规范化请求字符串
     canonicalized_query = '&'.join([
         f'{percent_encode(k)}={percent_encode(v)}'
         for k, v in sorted_params
     ])
-
-    # 构建待签名字符串
     string_to_sign = f'GET&%2F&{percent_encode(canonicalized_query)}'
-
-    # HMAC-SHA1 签名
     key = f'{access_key_secret}&'.encode('utf-8')
     signature = hmac.new(key, string_to_sign.encode('utf-8'), hashlib.sha1).digest()
     signature_base64 = base64.b64encode(signature).decode('utf-8')
-
     return signature_base64
 
 
@@ -58,7 +51,6 @@ def translate(text: str, source_lang: str = 'en', target_lang: str = 'zh') -> st
     if not access_key_id or not access_key_secret:
         raise ValueError('ALIYUN_ACCESS_KEY_ID and ALIYUN_ACCESS_KEY_SECRET must be set')
 
-    # API 参数
     params = {
         'Action': 'TranslateGeneral',
         'Version': '2018-10-12',
@@ -75,15 +67,12 @@ def translate(text: str, source_lang: str = 'en', target_lang: str = 'zh') -> st
         'SourceText': text,
     }
 
-    # 生成签名
     params['Signature'] = sign(params, access_key_secret)
 
-    # 构建请求 URL
     endpoint = os.environ.get('ALIYUN_MT_ENDPOINT', 'mt.cn-hangzhou.aliyuncs.com')
     query_string = '&'.join([f'{k}={urllib.parse.quote(v, safe="")}' for k, v in params.items()])
     url = f'https://{endpoint}/?{query_string}'
 
-    # 发送请求
     req = urllib.request.Request(url)
     try:
         with urllib.request.urlopen(req, timeout=30) as response:
@@ -100,6 +89,27 @@ def translate(text: str, source_lang: str = 'en', target_lang: str = 'zh') -> st
         raise Exception(f"Translation failed (Code: {result.get('Code')}): {result.get('Message', result)}")
 
 
+def fix_markdown_format(text: str) -> str:
+    """
+    修复翻译后的 Markdown 格式
+    阿里云翻译有时会破坏 markdown 格式，需要修复
+    """
+    lines = text.split('\n')
+    fixed_lines = []
+
+    for line in lines:
+        # 修复列表项格式: "-文字" -> "- 文字"
+        line = re.sub(r'^-(\S)', r'- \1', line)
+        line = re.sub(r'^\*-(\S)', r'*- \1', line)  # 修复 "- Markdown: text"
+
+        # 修复数字列表: "1.文字" -> "1. 文字"
+        line = re.sub(r'^(\d+)\.(\S)', r'\1. \2', line)
+
+        fixed_lines.append(line)
+
+    return '\n'.join(fixed_lines)
+
+
 def translate_long_text(text: str, source_lang: str = 'en', target_lang: str = 'zh',
                        max_chunk_size: int = 4500) -> str:
     """
@@ -107,7 +117,8 @@ def translate_long_text(text: str, source_lang: str = 'en', target_lang: str = '
     阿里云 API 单次请求上限 5000 字符
     """
     if len(text) <= max_chunk_size:
-        return translate(text, source_lang, target_lang)
+        result = translate(text, source_lang, target_lang)
+        return fix_markdown_format(result)
 
     # 按段落分割
     paragraphs = text.split('\n\n')
@@ -121,11 +132,9 @@ def translate_long_text(text: str, source_lang: str = 'en', target_lang: str = '
             if current_chunk:
                 chunks.append(current_chunk)
             if len(para) > max_chunk_size:
-                # 段落太长，按句子分割
                 sentences = para.replace('. ', '.\n').split('\n')
                 for sentence in sentences:
                     if len(sentence) > max_chunk_size:
-                        # 句子也太长，按字符分割
                         for i in range(0, len(sentence), max_chunk_size):
                             chunks.append(sentence[i:i+max_chunk_size])
                     else:
@@ -143,9 +152,10 @@ def translate_long_text(text: str, source_lang: str = 'en', target_lang: str = '
         print(f'Translating chunk {i+1}/{len(chunks)}...', file=sys.stderr)
         translated = translate(chunk, source_lang, target_lang)
         translated_chunks.append(translated)
-        time.sleep(0.5)  # 避免请求过快
+        time.sleep(0.5)
 
-    return '\n\n'.join(translated_chunks)
+    result = '\n\n'.join(translated_chunks)
+    return fix_markdown_format(result)
 
 
 if __name__ == '__main__':
