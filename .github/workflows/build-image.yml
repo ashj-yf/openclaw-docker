@@ -72,23 +72,20 @@ jobs:
       - name: Translate release notes to Chinese
         id: translate
         run: |
-          ORIGINAL_NOTES='${{ inputs.release_notes }}'
+          # 使用阿里云机器翻译
+          if [ -n "${{ secrets.ALIYUN_ACCESS_KEY_ID }}" ] && [ -n "${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}" ]; then
+            export ALIYUN_ACCESS_KEY_ID="${{ secrets.ALIYUN_ACCESS_KEY_ID }}"
+            export ALIYUN_ACCESS_KEY_SECRET="${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}"
 
-          if [ -n "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
-            translated=$(curl -s https://api.anthropic.com/v1/messages \
-              -H "Content-Type: application/json" \
-              -H "x-api-key: ${{ secrets.ANTHROPIC_API_KEY }}" \
-              -H "anthropic-version: 2023-06-01" \
-              -d '{
-                "model": "claude-sonnet-4-20250514",
-                "max_tokens": 4096,
-                "messages": [{
-                  "role": "user",
-                  "content": "请将以下 OpenClaw release notes 翻译成中文，保持格式和结构，只翻译内容，不要添加额外说明：\n\n'"$ORIGINAL_NOTES"'"
-                }]
-              }' | jq -r '.content[0].text')
+            # 将 release notes 保存到文件（避免命令行参数过长）
+            cat > /tmp/notes.txt << 'NOTES_EOF'
+          ${{ inputs.release_notes }}
+          NOTES_EOF
+
+            # 执行翻译
+            translated=$(python3 scripts/translate.py "$(cat /tmp/notes.txt)" en zh)
           else
-            translated="> 以下为官方原文（暂未翻译）：\n\n${ORIGINAL_NOTES}"
+            translated="> 以下为官方原文（暂未翻译）：\n\n${{ inputs.release_notes }}"
           fi
 
           {

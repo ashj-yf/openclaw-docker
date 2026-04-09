@@ -154,6 +154,28 @@ OpenClaw 主程序，提供 AI 助手功能。
 | `IMAGE_TAG` | `latest` | 镜像标签 |
 | `OPENCLAW_SRC` | `./openclaw-src` | OpenClaw 源码目录（本地构建用） |
 
+## GitHub Secrets 配置
+
+构建 workflow 需要配置以下 Secrets（Settings → Secrets and variables → Actions）：
+
+| Secret | 必填 | 说明 |
+|--------|------|------|
+| `ALIYUN_ACCESS_KEY_ID` | 是 | 阿里云 AccessKey ID |
+| `ALIYUN_ACCESS_KEY_SECRET` | 是 | 阿里云 AccessKey Secret |
+
+### 获取阿里云 AccessKey
+
+1. 登录 [阿里云控制台](https://ram.console.aliyun.com/manage/ak)
+2. 创建 AccessKey（建议使用 RAM 子账号，仅授予机器翻译权限）
+3. 权限策略：`AliyunMTFullAccess`
+
+### 阿里云机器翻译定价
+
+- **免费额度**: 每月 100 万字符
+- **超额价格**: ¥50/百万字符
+
+详细定价：[阿里云机器翻译定价](https://www.aliyun.com/price/product#/alimt/detail)
+
 ## 版本列表
 
 所有版本发布请查看 [Releases 页面](../../releases)。
