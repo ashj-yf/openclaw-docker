@@ -126,6 +126,9 @@ def translate_long_text(text: str, source_lang: str = 'en', target_lang: str = '
     current_chunk = ""
 
     for para in paragraphs:
+        # Skip empty paragraphs
+        if not para or not para.strip():
+            continue
         if len(current_chunk) + len(para) + 2 <= max_chunk_size:
             current_chunk += ('\n\n' if current_chunk else '') + para
         else:
@@ -134,9 +137,14 @@ def translate_long_text(text: str, source_lang: str = 'en', target_lang: str = '
             if len(para) > max_chunk_size:
                 sentences = para.replace('. ', '.\n').split('\n')
                 for sentence in sentences:
+                    # Skip empty sentences
+                    if not sentence or not sentence.strip():
+                        continue
                     if len(sentence) > max_chunk_size:
                         for i in range(0, len(sentence), max_chunk_size):
-                            chunks.append(sentence[i:i+max_chunk_size])
+                            chunk_part = sentence[i:i+max_chunk_size]
+                            if chunk_part.strip():
+                                chunks.append(chunk_part)
                     else:
                         chunks.append(sentence)
             else:
@@ -149,6 +157,10 @@ def translate_long_text(text: str, source_lang: str = 'en', target_lang: str = '
     # 翻译每个分段
     translated_chunks = []
     for i, chunk in enumerate(chunks):
+        # Skip empty chunks
+        if not chunk or not chunk.strip():
+            print(f'Skipping empty chunk {i+1}/{len(chunks)}...', file=sys.stderr)
+            continue
         print(f'Translating chunk {i+1}/{len(chunks)}...', file=sys.stderr)
         translated = translate(chunk, source_lang, target_lang)
         translated_chunks.append(translated)
