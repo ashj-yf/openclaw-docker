@@ -22,6 +22,10 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
+  KEEP_VERSIONS: 5  # 保留最近 5 个版本
+
+env:
+  REGISTRY: ghcr.io
 
 jobs:
   # 构建主镜像
@@ -293,3 +297,75 @@ jobs:
           body_path: release_body.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # 清理旧的镜像版本，只保留最近 5 个
+  cleanup-versions:
+    needs: create-release
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Clean up old package versions
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const keepVersions = parseInt(process.env.KEEP_VERSIONS) || 5;
+            const packageNames = [
+              'openclaw-docker'
+            ];
+
+            for (const packageName of packageNames) {
+              console.log(`Processing package: ${packageName}`);
+
+              // 获取所有版本
+              const versions = await github.paginate(
+                github.rest.packages.getAllPackageVersionsForPackageOwnedByAuthenticatedUser,
+                {
+                  package_type: 'container',
+                  package_name: packageName,
+                  per_page: 100
+                }
+              );
+
+              console.log(`Found ${versions.length} versions`);
+
+              // 按创建时间排序（最新的在前）
+              const sortedVersions = versions.sort((a, b) =>
+                new Date(b.created_at) - new Date(a.created_at)
+              );
+
+              // 获取需要删除的版本（保留最新的 5 个）
+              const versionsToDelete = sortedVersions.slice(keepVersions);
+
+              console.log(`Keeping ${Math.min(versions.length, keepVersions)} versions, deleting ${versionsToDelete.length} versions`);
+
+              // 删除旧版本
+              for (const version of versionsToDelete) {
+                try {
+                  // 检查是否有标签，只删除带版本号标签的（如 v2026.4.9），不删除 latest/sandbox 等固定标签
+                  const tags = version.metadata?.container?.tags || [];
+                  const hasFixedTag = tags.some(tag =>
+                    tag === 'latest' ||
+                    tag === 'sandbox' ||
+                    tag === 'sandbox-browser' ||
+                    tag === 'sandbox-common' ||
+                    tag === 'bookworm-slim'
+                  );
+
+                  if (hasFixedTag) {
+                    console.log(`Skipping version ${version.id} with fixed tag: ${tags.join(', ')}`);
+                    continue;
+                  }
+
+                  await github.rest.packages.deletePackageVersionForAuthenticatedUser({
+                    package_type: 'container',
+                    package_name: packageName,
+                    package_version_id: version.id
+                  });
+                  console.log(`Deleted version ${version.id} (${tags.join(', ')})`);
+                } catch (error) {
+                  console.log(`Failed to delete version ${version.id}: ${error.message}`);
+                }
+              }
+            }
