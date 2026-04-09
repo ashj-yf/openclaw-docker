@@ -237,7 +237,7 @@ jobs:
     env:
       VERSION: ${{ inputs.version }}
       RELEASE_HTML_URL: ${{ inputs.release_html_url }}
-      IMAGE_NAME: ${{ env.REGISTRY }}/${{ github.repository }}
+      IMAGE_NAME: ghcr.io/${{ github.repository }}
 
     steps:
       - name: Checkout
