@@ -1,109 +1,13 @@
-# OpenClaw Docker Compose
-# 最干净的 OpenClaw Docker 镜像
+# OpenClaw Docker Compose - 基础配置
+# 使用方式: docker compose -f docker-compose.yml -f docker-compose.main.yml up -d
 
-x-common-env: &common-env
+x-common-vars: &common-vars
   IMAGE_REGISTRY: ${IMAGE_REGISTRY:-ghcr.io}
   IMAGE_REPO: ${IMAGE_REPO:-ashj-yf/openclaw-docker}
   IMAGE_TAG: ${IMAGE_TAG:-latest}
 
-services:
-  # ==================== 主服务 ====================
-  openclaw:
-    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_REPO:-ashj-yf/openclaw-docker}:${IMAGE_TAG:-latest}
-    build:
-      context: ${OPENCLAW_SRC:-./openclaw-src}
-      dockerfile: Dockerfile
-      args:
-        OPENCLAW_INSTALL_BROWSER: "1"
-      platforms:
-        - linux/amd64
-        - linux/arm64
-    container_name: openclaw
-    hostname: openclaw
-    restart: unless-stopped
-    ports:
-      - "18789:18789"
-    volumes:
-      - openclaw-data:/app/data
-      - openclaw-skills:/app/skills
-    environment:
-      - NODE_ENV=production
-    healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:18789/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
-      interval: 3m
-      timeout: 10s
-      start_period: 15s
-      retries: 3
-    profiles:
-      - main
-      - all
-
-  # ==================== Sandbox 服务 ====================
-  sandbox:
-    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_REPO:-ashj-yf/openclaw-docker}:sandbox
-    build:
-      context: ${OPENCLAW_SRC:-./openclaw-src}
-      dockerfile: Dockerfile.sandbox
-      platforms:
-        - linux/amd64
-        - linux/arm64
-    container_name: openclaw-sandbox
-    hostname: sandbox
-    restart: unless-stopped
-    volumes:
-      - sandbox-home:/home/sandbox
-    working_dir: /home/sandbox
-    profiles:
-      - sandbox
-      - all
-
-  # ==================== Sandbox Browser ====================
-  sandbox-browser:
-    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_REPO:-ashj-yf/openclaw-docker}:sandbox-browser
-    build:
-      context: ${OPENCLAW_SRC:-./openclaw-src}
-      dockerfile: Dockerfile.sandbox-browser
-      platforms:
-        - linux/amd64
-        - linux/arm64
-    container_name: openclaw-sandbox-browser
-    hostname: sandbox-browser
-    restart: unless-stopped
-    ports:
-      - "9222:9222"   # Chrome DevTools Protocol
-      - "5900:5900"   # VNC
-      - "6080:6080"   # noVNC (Web VNC)
-    volumes:
-      - sandbox-browser-home:/home/sandbox
-    working_dir: /home/sandbox
-    profiles:
-      - sandbox-browser
-      - all
-
-  # ==================== Sandbox Common (完整开发环境) ====================
-  sandbox-common:
-    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_REPO:-ashj-yf/openclaw-docker}:sandbox-common
-    build:
-      context: ${OPENCLAW_SRC:-./openclaw-src}
-      dockerfile: Dockerfile.sandbox-common
-      args:
-        BASE_IMAGE: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_REPO:-ashj-yf/openclaw-docker}:bookworm-slim
-      platforms:
-        - linux/amd64
-        - linux/arm64
-    container_name: openclaw-sandbox-common
-    hostname: sandbox-common
-    restart: unless-stopped
-    volumes:
-      - sandbox-common-home:/home/sandbox
-    working_dir: /home/sandbox
-    profiles:
-      - sandbox-common
-      - all
-
-volumes:
-  openclaw-data:
-  openclaw-skills:
-  sandbox-home:
-  sandbox-browser-home:
-  sandbox-common-home:
+x-build-config: &build-config
+  context: ${OPENCLAW_SRC:-./openclaw-src}
+  platforms:
+    - linux/amd64
+    - linux/arm64
