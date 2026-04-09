@@ -163,7 +163,15 @@ if __name__ == '__main__':
         print(__doc__)
         sys.exit(1)
 
-    text = sys.argv[1]
+    input_arg = sys.argv[1]
+
+    # Support file path as input
+    if os.path.isfile(input_arg):
+        with open(input_arg, 'r', encoding='utf-8') as f:
+            text = f.read()
+    else:
+        text = input_arg
+
     source_lang = sys.argv[2] if len(sys.argv) > 2 else 'en'
     target_lang = sys.argv[3] if len(sys.argv) > 3 else 'zh'
 
