@@ -1,10 +1,10 @@
 # OpenClaw Sandbox Browser - 带浏览器的沙盒
-# 启动: docker compose -f docker-compose.yml -f docker-compose.sandbox-browser.yml up -d
+# 使用: docker compose -f docker-compose.sandbox-browser.yml up -d
 #
 # 端口说明:
 #   - 9222: Chrome DevTools Protocol
 #   - 5900: VNC (传统 VNC 客户端)
-#   - 6080: noVNC (Web 浏览器访问)
+#   - 6080: noVNC (Web 浏览器访问 http://localhost:6080)
 
 services:
   sandbox-browser:

@@ -1,5 +1,5 @@
 # OpenClaw Sandbox Common - 完整开发环境沙盒
-# 启动: docker compose -f docker-compose.yml -f docker-compose.sandbox-common.yml up -d
+# 使用: docker compose -f docker-compose.sandbox-common.yml up -d
 #
 # 包含:
 #   - Node.js, npm, pnpm

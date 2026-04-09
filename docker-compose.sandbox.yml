@@ -1,5 +1,5 @@
-# OpenClaw Sandbox 基础镜像
-# 启动: docker compose -f docker-compose.yml -f docker-compose.sandbox.yml up -d
+# OpenClaw Sandbox - 基础沙盒容器
+# 使用: docker compose -f docker-compose.sandbox.yml up -d
 
 services:
   sandbox:
