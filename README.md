@@ -4,59 +4,46 @@
 
 ## 镜像列表
 
-| 镜像 | 标签 | 用途 | 大小 |
-|------|------|------|------|
-| 主镜像 | `ghcr.io/ashj-yf/openclaw-docker:latest` | OpenClaw 主程序 | ~1.2GB |
-| Sandbox | `ghcr.io/ashj-yf/openclaw-docker:sandbox` | 基础沙盒容器 | ~200MB |
-| Sandbox Browser | `ghcr.io/ashj-yf/openclaw-docker:sandbox-browser` | 带浏览器的沙盒 | ~800MB |
-| Sandbox Common | `ghcr.io/ashj-yf/openclaw-docker:sandbox-common` | 完整开发环境沙盒 | ~2GB |
+| 镜像 | Compose 文件 | 用途 | 大小 |
+|------|-------------|------|------|
+| `ghcr.io/ashj-yf/openclaw-docker:latest` | `docker-compose.main.yml` | OpenClaw 主程序 | ~1.2GB |
+| `ghcr.io/ashj-yf/openclaw-docker:sandbox` | `docker-compose.sandbox.yml` | 基础沙盒容器 | ~200MB |
+| `ghcr.io/ashj-yf/openclaw-docker:sandbox-browser` | `docker-compose.sandbox-browser.yml` | 带浏览器的沙盒 | ~800MB |
+| `ghcr.io/ashj-yf/openclaw-docker:sandbox-common` | `docker-compose.sandbox-common.yml` | 完整开发环境沙盒 | ~2GB |
 
 所有镜像支持 `amd64` 和 `arm64` 架构。
 
 ## 快速开始
 
-### 使用 Docker Compose（推荐）
+### 使用 Docker Compose
 
-项目使用多个 compose 文件，按需组合使用：
-
-| 文件 | 用途 |
-|------|------|
-| `docker-compose.yml` | 基础配置（必须） |
-| `docker-compose.main.yml` | 主服务 |
-| `docker-compose.sandbox.yml` | 基础沙盒 |
-| `docker-compose.sandbox-browser.yml` | 带浏览器的沙盒 |
-| `docker-compose.sandbox-common.yml` | 完整开发环境沙盒 |
-| `docker-compose.all.yml` | 启动所有服务 |
-
-### 启动主服务
+每个镜像对应一个独立的 compose 文件，直接运行即可：
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.main.yml up -d
-```
+# 启动主服务
+docker compose -f docker-compose.main.yml up -d
 
-### 启动 Sandbox Browser
+# 启动基础沙盒
+docker compose -f docker-compose.sandbox.yml up -d
 
-```bash
-docker compose -f docker-compose.yml -f docker-compose.sandbox-browser.yml up -d
-```
+# 启动带浏览器的沙盒
+docker compose -f docker-compose.sandbox-browser.yml up -d
 
-### 启动所有服务
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.all.yml up -d
+# 启动完整开发环境沙盒
+docker compose -f docker-compose.sandbox-common.yml up -d
 ```
 
 ### 常用命令
 
 ```bash
 # 查看日志
-docker compose logs -f openclaw
+docker compose -f docker-compose.main.yml logs -f
 
 # 停止服务
-docker compose -f docker-compose.yml -f docker-compose.main.yml down
+docker compose -f docker-compose.main.yml down
 
 # 重启服务
-docker compose -f docker-compose.yml -f docker-compose.main.yml restart
+docker compose -f docker-compose.main.yml restart
 ```
 
 ### 使用 Docker 命令
@@ -101,9 +88,6 @@ chmod +x build.sh
 
 # 构建并推送到 ghcr.io
 PUSH=true ./build.sh v2026.4.9
-
-# 使用指定 OpenClaw 版本源码
-OPENCLAW_VERSION=v2026.4.9 ./build.sh
 ```
 
 ### 使用 Docker Compose 本地构建
@@ -114,10 +98,10 @@ mkdir -p openclaw-src
 curl -sL https://api.github.com/repos/openclaw/openclaw/tarball/latest | tar -xzf - -C openclaw-src --strip-components=1
 
 # 构建并启动主服务
-docker compose -f docker-compose.yml -f docker-compose.main.yml up -d --build
+docker compose -f docker-compose.main.yml up -d --build
 
 # 构建并启动 sandbox-browser
-docker compose -f docker-compose.yml -f docker-compose.sandbox-browser.yml up -d --build
+docker compose -f docker-compose.sandbox-browser.yml up -d --build
 ```
 
 ## 服务说明
@@ -168,8 +152,7 @@ OpenClaw 主程序，提供 AI 助手功能。
 | `IMAGE_REGISTRY` | `ghcr.io` | 镜像 Registry |
 | `IMAGE_REPO` | `ashj-yf/openclaw-docker` | 仓库名称 |
 | `IMAGE_TAG` | `latest` | 镜像标签 |
-| `OPENCLAW_SRC` | `./openclaw-src` | OpenClaw 源码目录 |
-| `OPENCLAW_VERSION` | `latest` | OpenClaw 源码版本 |
+| `OPENCLAW_SRC` | `./openclaw-src` | OpenClaw 源码目录（本地构建用） |
 
 ## 版本列表
 

@@ -1,8 +1,0 @@
-# OpenClaw 所有服务
-# 启动: docker compose -f docker-compose.yml -f docker-compose.all.yml up -d
-
-include:
-  - docker-compose.main.yml
-  - docker-compose.sandbox.yml
-  - docker-compose.sandbox-browser.yml
-  - docker-compose.sandbox-common.yml

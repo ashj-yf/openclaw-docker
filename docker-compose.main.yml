@@ -1,16 +1,15 @@
 # OpenClaw 主服务
-# 启动: docker compose -f docker-compose.yml -f docker-compose.main.yml up -d
+# 使用: docker compose -f docker-compose.main.yml up -d
 
 services:
   openclaw:
     image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_REPO:-ashj-yf/openclaw-docker}:${IMAGE_TAG:-latest}
     build:
-      <<: &build-config
-        context: ${OPENCLAW_SRC:-./openclaw-src}
-        platforms:
-          - linux/amd64
-          - linux/arm64
+      context: ${OPENCLAW_SRC:-./openclaw-src}
       dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+        - linux/arm64
       args:
         OPENCLAW_INSTALL_BROWSER: "1"
     container_name: openclaw
