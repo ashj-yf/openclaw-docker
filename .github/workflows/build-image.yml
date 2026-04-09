@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Build and Push Docker Images
 
 on:
   workflow_dispatch:
@@ -20,8 +20,12 @@ permissions:
   contents: write
   packages: write
 
+env:
+  REGISTRY: ghcr.io
+
 jobs:
-  build:
+  # 构建主镜像
+  build-main:
     runs-on: ubuntu-latest
     outputs:
       digest: ${{ steps.build-push.outputs.digest }}
@@ -40,7 +44,7 @@ jobs:
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -51,7 +55,7 @@ jobs:
           mkdir -p openclaw-src
           tar -xzf openclaw-source.tar.gz -C openclaw-src --strip-components=1
 
-      - name: Build and push multi-arch image
+      - name: Build and push main image
         id: build-push
         uses: docker/build-push-action@v6
         with:
@@ -60,8 +64,8 @@ jobs:
           build-args: |
             OPENCLAW_INSTALL_BROWSER=1
           tags: |
-            ghcr.io/${{ github.repository }}:${{ inputs.version }}
-            ghcr.io/${{ github.repository }}:latest
+            ${{ env.REGISTRY }}/${{ github.repository }}:${{ inputs.version }}
+            ${{ env.REGISTRY }}/${{ github.repository }}:latest
           push: true
           provenance: false
 
@@ -93,15 +97,147 @@ jobs:
             echo "EOF"
           } >> $GITHUB_OUTPUT
 
+  # 构建 sandbox 基础镜像
+  build-sandbox:
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.build-push.outputs.digest }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download OpenClaw source
+        run: |
+          curl -sL -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "${{ inputs.download_url }}" -o openclaw-source.tar.gz
+          mkdir -p openclaw-src
+          tar -xzf openclaw-source.tar.gz -C openclaw-src --strip-components=1
+
+      - name: Build and push sandbox image
+        id: build-push
+        uses: docker/build-push-action@v6
+        with:
+          context: openclaw-src
+          file: openclaw-src/Dockerfile.sandbox
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository }}:sandbox-${{ inputs.version }}
+            ${{ env.REGISTRY }}/${{ github.repository }}:sandbox
+            ${{ env.REGISTRY }}/${{ github.repository }}:bookworm-slim
+          push: true
+          provenance: false
+
+  # 构建 sandbox-browser 镜像
+  build-sandbox-browser:
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.build-push.outputs.digest }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download OpenClaw source
+        run: |
+          curl -sL -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "${{ inputs.download_url }}" -o openclaw-source.tar.gz
+          mkdir -p openclaw-src
+          tar -xzf openclaw-source.tar.gz -C openclaw-src --strip-components=1
+
+      - name: Build and push sandbox-browser image
+        id: build-push
+        uses: docker/build-push-action@v6
+        with:
+          context: openclaw-src
+          file: openclaw-src/Dockerfile.sandbox-browser
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository }}:sandbox-browser-${{ inputs.version }}
+            ${{ env.REGISTRY }}/${{ github.repository }}:sandbox-browser
+          push: true
+          provenance: false
+
+  # 构建 sandbox-common 镜像（依赖 sandbox）
+  build-sandbox-common:
+    needs: build-sandbox
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.build-push.outputs.digest }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download OpenClaw source
+        run: |
+          curl -sL -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "${{ inputs.download_url }}" -o openclaw-source.tar.gz
+          mkdir -p openclaw-src
+          tar -xzf openclaw-source.tar.gz -C openclaw-src --strip-components=1
+
+      - name: Build and push sandbox-common image
+        id: build-push
+        uses: docker/build-push-action@v6
+        with:
+          context: openclaw-src
+          file: openclaw-src/Dockerfile.sandbox-common
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository }}:bookworm-slim
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository }}:sandbox-common-${{ inputs.version }}
+            ${{ env.REGISTRY }}/${{ github.repository }}:sandbox-common
+          push: true
+          provenance: false
+
+  # 创建 Release
   create-release:
-    needs: build
+    needs: [build-main, build-sandbox, build-sandbox-browser, build-sandbox-common]
     runs-on: ubuntu-latest
     env:
       VERSION: ${{ inputs.version }}
       RELEASE_HTML_URL: ${{ inputs.release_html_url }}
-      IMAGE_NAME: ghcr.io/${{ github.repository }}
-      DIGEST: ${{ needs.build.outputs.digest }}
-      TRANSLATED_NOTES: ${{ needs.build.outputs.translated_notes }}
+      IMAGE_NAME: ${{ env.REGISTRY }}/${{ github.repository }}
 
     steps:
       - name: Checkout
@@ -116,44 +252,40 @@ jobs:
 
           ### 更新内容
 
-          ${TRANSLATED_NOTES}
+          ${{ needs.build-main.outputs.translated_notes }}
 
           ---
 
           ## 镜像信息
 
-          | 项目 | 值 |
-          |------|-----|
-          | 镜像地址 | \`${IMAGE_NAME}:${VERSION}\` |
-          | Digest | \`${DIGEST}\` |
-          | 架构 | \`amd64\`, \`arm64\`（多架构 manifest） |
-          | 基础镜像 | \`node:24-bookworm\` |
-          | 浏览器支持 | 已内置（Playwright Chromium） |
+          所有镜像支持 \`amd64\` 和 \`arm64\` 架构。
+
+          | 镜像 | 标签 | 用途 |
+          |------|------|------|
+          | 主镜像 | \`${IMAGE_NAME}:latest\` | OpenClaw 主程序 |
+          | Sandbox | \`${IMAGE_NAME}:sandbox\` | 基础沙盒容器 |
+          | Sandbox Browser | \`${IMAGE_NAME}:sandbox-browser\` | 带浏览器的沙盒 |
+          | Sandbox Common | \`${IMAGE_NAME}:sandbox-common\` | 完整开发环境沙盒 |
 
           ### 快速使用
 
           \`\`\`bash
-          # 拉取镜像（自动匹配架构）
+          # 拉取主镜像
           docker pull ${IMAGE_NAME}:latest
 
-          # 运行容器
-          docker run -d --name openclaw \\
-            -p 18789:18789 \\
-            ${IMAGE_NAME}:latest
-
-          # 查看日志
-          docker logs -f openclaw
+          # 使用 docker-compose 启动
+          curl -O https://raw.githubusercontent.com/${{ github.repository }}/main/docker-compose.yml
+          docker compose up -d
           \`\`\`
 
-          ### 手动指定架构
+          ### 镜像 Digest
 
-          \`\`\`bash
-          # ARM64 设备（如 M1/M2 Mac、Raspberry Pi）
-          docker pull --platform linux/arm64 ${IMAGE_NAME}:latest
-
-          # AMD64 设备（标准服务器）
-          docker pull --platform linux/amd64 ${IMAGE_NAME}:latest
-          \`\`\`
+          | 镜像 | Digest |
+          |------|--------|
+          | 主镜像 | \`${{ needs.build-main.outputs.digest }}\` |
+          | Sandbox | \`${{ needs.build-sandbox.outputs.digest }}\` |
+          | Sandbox Browser | \`${{ needs.build-sandbox-browser.outputs.digest }}\` |
+          | Sandbox Common | \`${{ needs.build-sandbox-common.outputs.digest }}\` |
           EOF
 
       - name: Create release
