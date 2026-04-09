@@ -1,0 +1,155 @@
+name: Build and Push Docker Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'OpenClaw version (e.g. v1.2.3)'
+        required: true
+      download_url:
+        description: 'Source code tarball URL'
+        required: true
+      release_notes:
+        description: 'Official release notes'
+        required: true
+      release_html_url:
+        description: 'Official release HTML URL'
+        required: true
+
+env:
+  REGISTRY: ${{ secrets.DOCKER_REGISTRY || 'docker.io' }}
+  IMAGE_NAME: ${{ secrets.DOCKER_IMAGE_NAME || 'openclaw' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.build-push.outputs.digest }}
+      translated_notes: ${{ steps.translate.outputs.translated_notes }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Download OpenClaw source
+        run: |
+          curl -sL -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "${{ inputs.download_url }}" -o openclaw-source.tar.gz
+          mkdir -p openclaw-src
+          tar -xzf openclaw-source.tar.gz -C openclaw-src --strip-components=1
+
+      - name: Build and push multi-arch image
+        id: build-push
+        uses: docker/build-push-action@v6
+        with:
+          context: openclaw-src
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            OPENCLAW_INSTALL_BROWSER=1
+          tags: |
+            ${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ inputs.version }}
+            ${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+          push: true
+          provenance: false
+
+      - name: Translate release notes to Chinese
+        id: translate
+        env:
+          ORIGINAL_NOTES: ${{ inputs.release_notes }}
+        run: |
+          # 使用 Anthropic Claude API 翻译（需要配置 ANTHROPIC_API_KEY secret）
+          if [ -n "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            translated=$(curl -s https://api.anthropic.com/v1/messages \
+              -H "Content-Type: application/json" \
+              -H "x-api-key: ${{ secrets.ANTHROPIC_API_KEY }}" \
+              -H "anthropic-version: 2023-06-01" \
+              -d '{
+                "model": "claude-sonnet-4-20250514",
+                "max_tokens": 4096,
+                "messages": [{
+                  "role": "user",
+                  "content": "请将以下 OpenClaw release notes 翻译成中文，保持格式和结构，只翻译内容，不要添加额外说明：\n\n'"$ORIGINAL_NOTES"'"
+                }]
+              }' | jq -r '.content[0].text')
+          else
+            # 如果没有 API key，保留原文并标注
+            translated="> 以下为官方原文（暂未翻译）：\n\n${ORIGINAL_NOTES}"
+          fi
+
+          echo "translated_notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$translated" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+  create-release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ inputs.version }}
+          name: OpenClaw ${{ inputs.version }}（中文版）
+          body: |
+            ## OpenClaw ${{ inputs.version }}（中文版）
+
+            > 原文：[OpenClaw Official Release](${{ inputs.release_html_url }})
+
+            ### 更新内容
+
+            ${{ needs: build.outputs.translated_notes }}
+
+            ---
+
+            ## 镜像信息
+
+            | 项目 | 值 |
+            |------|-----|
+            | 镜像地址 | `${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ inputs.version }}` |
+            | Digest | `${{ needs. build.outputs.digest }}` |
+            | 架构 | `amd64`, `arm64`（多架构 manifest） |
+            | 基础镜像 | `node:24-bookworm` |
+            | 浏览器支持 | 已内置（Playwright Chromium） |
+
+            ### 快速使用
+
+            ```bash
+            # 拉取镜像（自动匹配架构）
+            docker pull ${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+
+            # 运行容器
+            docker run -d --name openclaw \
+              -p 18789:18789 \
+              ${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+
+            # 查看日志
+            docker logs -f openclaw
+            ```
+
+            ### 手动指定架构
+
+            ```bash
+            # ARM64 设备（如 M1/M2 Mac、Raspberry Pi）
+            docker pull --platform linux/arm64 ${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+
+            # AMD64 设备（标准服务器）
+            docker pull --platform linux/amd64 ${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+            ```
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
