@@ -79,19 +79,25 @@ def translate(text: str, source_lang: str = 'en', target_lang: str = 'zh') -> st
     params['Signature'] = sign(params, access_key_secret)
 
     # 构建请求 URL
-    endpoint = 'mt.cn-hangzhou.aliyuncs.com'
+    endpoint = os.environ.get('ALIYUN_MT_ENDPOINT', 'mt.cn-hangzhou.aliyuncs.com')
     query_string = '&'.join([f'{k}={urllib.parse.quote(v, safe="")}' for k, v in params.items()])
     url = f'https://{endpoint}/?{query_string}'
 
     # 发送请求
     req = urllib.request.Request(url)
-    with urllib.request.urlopen(req, timeout=30) as response:
-        result = json.loads(response.read().decode('utf-8'))
+    try:
+        with urllib.request.urlopen(req, timeout=30) as response:
+            result = json.loads(response.read().decode('utf-8'))
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode('utf-8')
+        raise Exception(f"HTTP Error {e.code}: {error_body}")
+    except Exception as e:
+        raise Exception(f"Request failed: {e}")
 
-    if result.get('Code') == 200:
+    if str(result.get('Code')) == '200':
         return result['Data']['Translated']
     else:
-        raise Exception(f"Translation failed: {result}")
+        raise Exception(f"Translation failed (Code: {result.get('Code')}): {result.get('Message', result)}")
 
 
 def translate_long_text(text: str, source_lang: str = 'en', target_lang: str = 'zh',
