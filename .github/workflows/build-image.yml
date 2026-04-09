@@ -9,9 +9,6 @@ on:
       download_url:
         description: 'Source code tarball URL'
         required: true
-      release_notes:
-        description: 'Official release notes'
-        required: true
       release_html_url:
         description: 'Official release HTML URL'
         required: true
@@ -22,13 +19,9 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  KEEP_VERSIONS: 5  # 保留最近 5 个版本
-
-env:
-  REGISTRY: ghcr.io
+  KEEP_VERSIONS: 5
 
 jobs:
-  # 构建主镜像
   build-main:
     runs-on: ubuntu-latest
     outputs:
@@ -73,23 +66,27 @@ jobs:
           push: true
           provenance: false
 
+      - name: Fetch full release notes from GitHub API
+        id: fetch-notes
+        run: |
+          VERSION="${{ inputs.version }}"
+          response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/openclaw/openclaw/releases/tags/${VERSION}")
+
+          echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$response" | jq -r '.body' >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Translate release notes to Chinese
         id: translate
         run: |
-          # 使用阿里云机器翻译
           if [ -n "${{ secrets.ALIYUN_ACCESS_KEY_ID }}" ] && [ -n "${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}" ]; then
             export ALIYUN_ACCESS_KEY_ID="${{ secrets.ALIYUN_ACCESS_KEY_ID }}"
             export ALIYUN_ACCESS_KEY_SECRET="${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}"
 
-            # 将 release notes 保存到文件（避免命令行参数过长）
-            cat > /tmp/notes.txt << 'NOTES_EOF'
-          ${{ inputs.release_notes }}
-          NOTES_EOF
-
-            # 执行翻译
-            translated=$(python3 scripts/translate.py "$(cat /tmp/notes.txt)" en zh)
+            translated=$(python3 scripts/translate.py "${{ steps.fetch-notes.outputs.release_notes }}" en zh)
           else
-            translated="> 以下为官方原文（暂未翻译）：\n\n${{ inputs.release_notes }}"
+            translated="> 以下为官方原文（暂未翻译）：\n\n${{ steps.fetch-notes.outputs.release_notes }}"
           fi
 
           {
@@ -98,7 +95,6 @@ jobs:
             echo "EOF"
           } >> $GITHUB_OUTPUT
 
-  # 构建 sandbox 基础镜像
   build-sandbox:
     runs-on: ubuntu-latest
     outputs:
@@ -142,7 +138,6 @@ jobs:
           push: true
           provenance: false
 
-  # 构建 sandbox-browser 镜像
   build-sandbox-browser:
     runs-on: ubuntu-latest
     outputs:
@@ -185,7 +180,6 @@ jobs:
           push: true
           provenance: false
 
-  # 构建 sandbox-common 镜像（依赖 sandbox）
   build-sandbox-common:
     needs: build-sandbox
     runs-on: ubuntu-latest
@@ -231,7 +225,6 @@ jobs:
           push: true
           provenance: false
 
-  # 创建 Release
   create-release:
     needs: [build-main, build-sandbox, build-sandbox-browser, build-sandbox-common]
     runs-on: ubuntu-latest
@@ -275,8 +268,8 @@ jobs:
           docker pull ${IMAGE_NAME}:latest
 
           # 使用 docker-compose 启动
-          curl -O https://raw.githubusercontent.com/${{ github.repository }}/main/docker-compose.yml
-          docker compose up -d
+          curl -O https://raw.githubusercontent.com/${{ github.repository }}/main/docker-compose.main.yml
+          docker compose -f docker-compose.main.yml up -d
           \`\`\`
 
           ### 镜像 Digest
@@ -298,7 +291,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # 清理旧的镜像版本，只保留最近 5 个
   cleanup-versions:
     needs: create-release
     runs-on: ubuntu-latest
@@ -311,14 +303,11 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const keepVersions = parseInt(process.env.KEEP_VERSIONS) || 5;
-            const packageNames = [
-              'openclaw-docker'
-            ];
+            const packageNames = ['openclaw-docker'];
 
             for (const packageName of packageNames) {
               console.log(`Processing package: ${packageName}`);
 
-              // 获取所有版本
               const versions = await github.paginate(
                 github.rest.packages.getAllPackageVersionsForPackageOwnedByAuthenticatedUser,
                 {
@@ -330,20 +319,16 @@ jobs:
 
               console.log(`Found ${versions.length} versions`);
 
-              // 按创建时间排序（最新的在前）
               const sortedVersions = versions.sort((a, b) =>
                 new Date(b.created_at) - new Date(a.created_at)
               );
 
-              // 获取需要删除的版本（保留最新的 5 个）
               const versionsToDelete = sortedVersions.slice(keepVersions);
 
               console.log(`Keeping ${Math.min(versions.length, keepVersions)} versions, deleting ${versionsToDelete.length} versions`);
 
-              // 删除旧版本
               for (const version of versionsToDelete) {
                 try {
-                  // 检查是否有标签，只删除带版本号标签的（如 v2026.4.9），不删除 latest/sandbox 等固定标签
                   const tags = version.metadata?.container?.tags || [];
                   const hasFixedTag = tags.some(tag =>
                     tag === 'latest' ||
