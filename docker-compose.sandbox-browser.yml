@@ -1,0 +1,30 @@
+# OpenClaw Sandbox Browser - 带浏览器的沙盒
+# 启动: docker compose -f docker-compose.yml -f docker-compose.sandbox-browser.yml up -d
+#
+# 端口说明:
+#   - 9222: Chrome DevTools Protocol
+#   - 5900: VNC (传统 VNC 客户端)
+#   - 6080: noVNC (Web 浏览器访问)
+
+services:
+  sandbox-browser:
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_REPO:-ashj-yf/openclaw-docker}:sandbox-browser
+    build:
+      context: ${OPENCLAW_SRC:-./openclaw-src}
+      dockerfile: Dockerfile.sandbox-browser
+      platforms:
+        - linux/amd64
+        - linux/arm64
+    container_name: openclaw-sandbox-browser
+    hostname: sandbox-browser
+    restart: unless-stopped
+    ports:
+      - "9222:9222"
+      - "5900:5900"
+      - "6080:6080"
+    volumes:
+      - sandbox-browser-home:/home/sandbox
+    working_dir: /home/sandbox
+
+volumes:
+  sandbox-browser-home:

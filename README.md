@@ -17,37 +17,46 @@
 
 ### 使用 Docker Compose（推荐）
 
+项目使用多个 compose 文件，按需组合使用：
+
+| 文件 | 用途 |
+|------|------|
+| `docker-compose.yml` | 基础配置（必须） |
+| `docker-compose.main.yml` | 主服务 |
+| `docker-compose.sandbox.yml` | 基础沙盒 |
+| `docker-compose.sandbox-browser.yml` | 带浏览器的沙盒 |
+| `docker-compose.sandbox-common.yml` | 完整开发环境沙盒 |
+| `docker-compose.all.yml` | 启动所有服务 |
+
+### 启动主服务
+
 ```bash
-# 下载 docker-compose.yml
-curl -O https://raw.githubusercontent.com/ashj-yf/openclaw-docker/main/docker-compose.yml
+docker compose -f docker-compose.yml -f docker-compose.main.yml up -d
+```
 
-# 启动主服务
-docker compose --profile main up -d
+### 启动 Sandbox Browser
 
+```bash
+docker compose -f docker-compose.yml -f docker-compose.sandbox-browser.yml up -d
+```
+
+### 启动所有服务
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.all.yml up -d
+```
+
+### 常用命令
+
+```bash
 # 查看日志
 docker compose logs -f openclaw
 
 # 停止服务
-docker compose down
-```
+docker compose -f docker-compose.yml -f docker-compose.main.yml down
 
-### 启动不同服务
-
-```bash
-# 主服务
-docker compose --profile main up -d
-
-# 基础 Sandbox
-docker compose --profile sandbox up -d
-
-# 带浏览器的 Sandbox（支持 VNC 访问）
-docker compose --profile sandbox-browser up -d
-
-# 完整开发环境 Sandbox
-docker compose --profile sandbox-common up -d
-
-# 启动所有服务
-docker compose --profile all up -d
+# 重启服务
+docker compose -f docker-compose.yml -f docker-compose.main.yml restart
 ```
 
 ### 使用 Docker 命令
@@ -100,14 +109,15 @@ OPENCLAW_VERSION=v2026.4.9 ./build.sh
 ### 使用 Docker Compose 本地构建
 
 ```bash
-# 设置源码目录
-export OPENCLAW_SRC=./openclaw-src
-
-# 下载源码（首次）
+# 下载源码
+mkdir -p openclaw-src
 curl -sL https://api.github.com/repos/openclaw/openclaw/tarball/latest | tar -xzf - -C openclaw-src --strip-components=1
 
-# 构建并启动
-docker compose --profile main up -d --build
+# 构建并启动主服务
+docker compose -f docker-compose.yml -f docker-compose.main.yml up -d --build
+
+# 构建并启动 sandbox-browser
+docker compose -f docker-compose.yml -f docker-compose.sandbox-browser.yml up -d --build
 ```
 
 ## 服务说明
@@ -131,12 +141,15 @@ OpenClaw 主程序，提供 AI 助手功能。
 
 带浏览器的沙盒，支持自动化浏览器操作。
 
-- **端口**:
-  - 9222: Chrome DevTools Protocol
-  - 5900: VNC
-  - 6080: noVNC (Web VNC)
+| 端口 | 用途 |
+|------|------|
+| 9222 | Chrome DevTools Protocol |
+| 5900 | VNC（传统客户端） |
+| 6080 | noVNC（Web 浏览器访问） |
+
 - 包含 Chromium 浏览器
 - 支持 VNC 远程访问
+- 访问 `http://localhost:6080` 使用 Web VNC
 
 ### Sandbox Common
 
@@ -155,6 +168,7 @@ OpenClaw 主程序，提供 AI 助手功能。
 | `IMAGE_REGISTRY` | `ghcr.io` | 镜像 Registry |
 | `IMAGE_REPO` | `ashj-yf/openclaw-docker` | 仓库名称 |
 | `IMAGE_TAG` | `latest` | 镜像标签 |
+| `OPENCLAW_SRC` | `./openclaw-src` | OpenClaw 源码目录 |
 | `OPENCLAW_VERSION` | `latest` | OpenClaw 源码版本 |
 
 ## 版本列表

@@ -1,0 +1,30 @@
+# OpenClaw Sandbox Common - 完整开发环境沙盒
+# 启动: docker compose -f docker-compose.yml -f docker-compose.sandbox-common.yml up -d
+#
+# 包含:
+#   - Node.js, npm, pnpm
+#   - Python 3
+#   - Go, Rust
+#   - Bun
+#   - Homebrew
+
+services:
+  sandbox-common:
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_REPO:-ashj-yf/openclaw-docker}:sandbox-common
+    build:
+      context: ${OPENCLAW_SRC:-./openclaw-src}
+      dockerfile: Dockerfile.sandbox-common
+      platforms:
+        - linux/amd64
+        - linux/arm64
+      args:
+        BASE_IMAGE: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_REPO:-ashj-yf/openclaw-docker}:bookworm-slim
+    container_name: openclaw-sandbox-common
+    hostname: sandbox-common
+    restart: unless-stopped
+    volumes:
+      - sandbox-common-home:/home/sandbox
+    working_dir: /home/sandbox
+
+volumes:
+  sandbox-common-home:

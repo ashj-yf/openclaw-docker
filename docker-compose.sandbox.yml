@@ -1,0 +1,21 @@
+# OpenClaw Sandbox 基础镜像
+# 启动: docker compose -f docker-compose.yml -f docker-compose.sandbox.yml up -d
+
+services:
+  sandbox:
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_REPO:-ashj-yf/openclaw-docker}:sandbox
+    build:
+      context: ${OPENCLAW_SRC:-./openclaw-src}
+      dockerfile: Dockerfile.sandbox
+      platforms:
+        - linux/amd64
+        - linux/arm64
+    container_name: openclaw-sandbox
+    hostname: sandbox
+    restart: unless-stopped
+    volumes:
+      - sandbox-home:/home/sandbox
+    working_dir: /home/sandbox
+
+volumes:
+  sandbox-home:
