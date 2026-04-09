@@ -17,7 +17,6 @@ jobs:
       has_new_release: ${{ steps.check.outputs.has_new_release }}
       version: ${{ steps.check.outputs.version }}
       download_url: ${{ steps.check.outputs.download_url }}
-      release_notes: ${{ steps.check.outputs.release_notes }}
       release_html_url: ${{ steps.check.outputs.release_html_url }}
 
     steps:
@@ -29,9 +28,6 @@ jobs:
 
           echo "version=$(echo "$response" | jq -r '.tag_name')" >> $GITHUB_OUTPUT
           echo "download_url=$(echo "$response" | jq -r '.tarball_url')" >> $GITHUB_OUTPUT
-          echo "release_notes<<EOF" >> $GITHUB_OUTPUT
-          echo "$response" | jq -r '.body' >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
           echo "release_html_url=$(echo "$response" | jq -r '.html_url')" >> $GITHUB_OUTPUT
 
       - name: Check if release already processed
@@ -60,6 +56,5 @@ jobs:
             {
               "version": "${{ steps.upstream.outputs.version }}",
               "download_url": "${{ steps.upstream.outputs.download_url }}",
-              "release_notes": "${{ steps.upstream.outputs.release_notes }}",
               "release_html_url": "${{ steps.upstream.outputs.release_html_url }}"
             }
