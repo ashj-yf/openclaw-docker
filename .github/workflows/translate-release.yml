@@ -99,33 +99,24 @@ jobs:
           IMAGE_NAME="${{ env.IMAGE_NAME }}"
           REPO="${{ github.repository }}"
 
-          # Build release body
-          {
-            echo "## OpenClaw ${VERSION}（中文版）"
-            echo ""
-            echo "> 原文：[OpenClaw Official Release](${RELEASE_HTML_URL})"
-            echo ""
-            echo "### 更新内容"
-            echo ""
-            cat translated_notes.txt
-            echo ""
-            echo "---"
-            echo ""
-            cat image_section.txt
-            echo ""
-            echo "### 快速使用"
-            echo ""
-            echo '```bash'
-            echo "# 拉取主镜像"
-            echo "docker pull ${IMAGE_NAME}:latest"
-            echo ""
-            echo "# 使用 docker-compose 启动"
-            echo "curl -O https://raw.githubusercontent.com/${REPO}/main/docker-compose.main.yml"
-            echo "docker compose -f docker-compose.main.yml up -d"
-            echo '```'"
-            echo ""
-            cat digest_section.txt
-          } > release_body.md
+          # Create release body using printf to avoid heredoc issues
+          printf '## OpenClaw %s（中文版）\n\n' "$VERSION" > release_body.md
+          printf '> 原文：[OpenClaw Official Release](%s)\n\n' "$RELEASE_HTML_URL" >> release_body.md
+          printf '### 更新内容\n\n' >> release_body.md
+          cat translated_notes.txt >> release_body.md
+          printf '\n---\n\n' >> release_body.md
+          cat image_section.txt >> release_body.md
+          printf '\n### 快速使用\n\n' >> release_body.md
+          printf '```bash\n' >> release_body.md
+          printf '# 拉取主镜像\n' >> release_body.md
+          printf 'docker pull %s:latest\n\n' "$IMAGE_NAME" >> release_body.md
+          printf '# 使用 docker-compose 启动\n' >> release_body.md
+          printf 'curl -O https://raw.githubusercontent.com/%s/main/docker-compose.main.yml\n' "$REPO" >> release_body.md
+          printf 'docker compose -f docker-compose.main.yml up -d\n' >> release_body.md
+          printf '```\n\n' >> release_body.md
+          cat digest_section.txt >> release_body.md
+
+          echo "Release body generated successfully"
 
       - name: Update release
         uses: actions/github-script@v7
