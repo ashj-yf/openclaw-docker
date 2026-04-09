@@ -51,11 +51,11 @@ jobs:
             export ALIYUN_ACCESS_KEY_ID="${{ secrets.ALIYUN_ACCESS_KEY_ID }}"
             export ALIYUN_ACCESS_KEY_SECRET="${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}"
 
-            python3 scripts/translate.py "${{ steps.fetch-notes.outputs.release_notes_file }}" en zh > translated_notes.txt
+            python3 scripts/translate.py release_notes.txt en zh > translated_notes.txt
           else
             echo "> 以下为官方原文（暂未翻译）：" > translated_notes.txt
             echo "" >> translated_notes.txt
-            cat ${{ steps.fetch-notes.outputs.release_notes_file }} >> translated_notes.txt
+            cat release_notes.txt >> translated_notes.txt
           fi
 
           echo "translated_notes_file=translated_notes.txt" >> $GITHUB_OUTPUT
@@ -66,26 +66,30 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const fs = require('fs');
             const release = await github.rest.repos.getReleaseByTag({
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag: '${{ inputs.version }}'
             });
 
-            // Extract digest info from existing body (preserve technical data)
             const body = release.data.body;
+            const releaseId = release.data.id;
+
+            // Extract digest info from existing body (preserve technical data)
             const digestMatch = body.match(/### 镜像 Digest\s*\n\s*\|.*?\n\s*\|.*?\n((?:\s*\|.*?\n)+)/);
             const digestSection = digestMatch ? digestMatch[0] : '';
 
             // Extract image info section
-            const imageMatch = body.match(/## 镜像信息\s*\n((?:.*?\n)+?)\s*### 快速使用/);
-            const imageSection = imageMatch ? imageMatch[0] : '';
+            const imageMatch = body.match(/## 镜像信息[\s\S]*?### 快速使用/);
+            const imageSection = imageMatch ? imageMatch[0].replace(/### 快速使用$/, '') : '';
 
-            return {
-              release_id: release.data.id,
-              digest_section: digestSection,
-              image_section: imageSection
-            };
+            // Write to files
+            fs.writeFileSync('release_id.txt', String(releaseId));
+            fs.writeFileSync('digest_section.txt', digestSection);
+            fs.writeFileSync('image_section.txt', imageSection);
+
+            console.log(`Release ID: ${releaseId}`);
 
       - name: Generate updated release body
         id: generate-body
@@ -93,9 +97,7 @@ jobs:
           VERSION="${{ inputs.version }}"
           RELEASE_HTML_URL="${{ inputs.release_html_url }}"
           IMAGE_NAME="${{ env.IMAGE_NAME }}"
-          DIGEST_SECTION="${{ fromJson(steps.get-release.outputs.result).digest_section }}"
-          IMAGE_SECTION="${{ fromJson(steps.get-release.outputs.result).image_section }}"
-          TRANSLATED_FILE="${{ steps.translate.outputs.translated_notes_file }}"
+          REPO="${{ github.repository }}"
 
           # Build release body
           {
@@ -105,11 +107,11 @@ jobs:
             echo ""
             echo "### 更新内容"
             echo ""
-            cat "${TRANSLATED_FILE}"
+            cat translated_notes.txt
             echo ""
             echo "---"
             echo ""
-            echo "${IMAGE_SECTION}"
+            cat image_section.txt
             echo ""
             echo "### 快速使用"
             echo ""
@@ -118,11 +120,11 @@ jobs:
             echo "docker pull ${IMAGE_NAME}:latest"
             echo ""
             echo "# 使用 docker-compose 启动"
-            echo "curl -O https://raw.githubusercontent.com/${{ github.repository }}/main/docker-compose.main.yml"
+            echo "curl -O https://raw.githubusercontent.com/${REPO}/main/docker-compose.main.yml"
             echo "docker compose -f docker-compose.main.yml up -d"
             echo '```'"
             echo ""
-            echo "${DIGEST_SECTION}"
+            cat digest_section.txt
           } > release_body.md
 
       - name: Update release
@@ -132,15 +134,15 @@ jobs:
           script: |
             const fs = require('fs');
             const body = fs.readFileSync('release_body.md', 'utf8');
+            const releaseId = parseInt(fs.readFileSync('release_id.txt', 'utf8'), 10);
+            const version = '${{ inputs.version }}';
 
             await github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              release_id: ${{
-                fromJson(steps.get-release.outputs.result).release_id
-              }},
-              name: `OpenClaw ${{
-                inputs.version
-              }}（中文版）`,
+              release_id: releaseId,
+              name: `OpenClaw ${version}（中文版）`,
               body: body
             });
+
+            console.log('Release updated successfully');
