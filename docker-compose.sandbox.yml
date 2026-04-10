@@ -16,3 +16,9 @@ services:
     volumes:
       - ./sandbox-home:/home/sandbox
     working_dir: /home/sandbox
+    networks:
+      - openclaw-network
+
+networks:
+  openclaw-network:
+    driver: bridge
