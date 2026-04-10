@@ -259,9 +259,9 @@ jobs:
           tag_name: ${{ inputs.version }}
           name: OpenClaw ${{ inputs.version }}
           body: |
-            ## OpenClaw ${VERSION}（中文版）
+            ## OpenClaw ${{ inputs.version }}（中文版）
 
-            > 原文：[OpenClaw Official Release](${RELEASE_HTML_URL})
+            > 原文：[OpenClaw Official Release](${{ inputs.release_html_url }})
 
             ### 更新内容
 
@@ -275,16 +275,16 @@ jobs:
 
             | 镜像 | 标签 | 用途 |
             |------|------|------|
-            | 主镜像 | `${IMAGE_NAME}:latest` | OpenClaw 主程序 |
-            | Sandbox | `${IMAGE_NAME}:sandbox` | 基础沙盒容器 |
-            | Sandbox Browser | `${IMAGE_NAME}:sandbox-browser` | 带浏览器的沙盒 |
-            | Sandbox Common | `${IMAGE_NAME}:sandbox-common` | 完整开发环境沙盒 |
+            | 主镜像 | `${{ env.IMAGE_NAME }}:latest` | OpenClaw 主程序 |
+            | Sandbox | `${{ env.IMAGE_NAME }}:sandbox` | 基础沙盒容器 |
+            | Sandbox Browser | `${{ env.IMAGE_NAME }}:sandbox-browser` | 带浏览器的沙盒 |
+            | Sandbox Common | `${{ env.IMAGE_NAME }}:sandbox-common` | 完整开发环境沙盒 |
 
             ### 快速使用
 
             ```bash
             # 拉取主镜像
-            docker pull ${IMAGE_NAME}:latest
+            docker pull ${{ env.IMAGE_NAME }}:latest
 
             # 使用 docker-compose 启动
             curl -O https://raw.githubusercontent.com/${{ github.repository }}/main/docker-compose.main.yml
