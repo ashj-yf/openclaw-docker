@@ -11,6 +11,12 @@ VERSION="${1:-local}"
 PLATFORMS="${PLATFORMS:-linux/amd64,linux/arm64}"
 OPENCLAW_VERSION="${OPENCLAW_VERSION:-}"
 
+# 华为云配置
+HUAWEI_REGISTRY="${HUAWEI_REGISTRY:-swr.cn-north-4.myhuaweicloud.com}"
+HUAWEI_ORG="${HUAWEI_ORG:-openclaw-docker}"
+HUAWEI_IMAGE="${HUAWEI_IMAGE:-openclaw}"
+PUSH_HUAWEI="${PUSH_HUAWEI:-false}"
+
 # 颜色输出
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -80,6 +86,14 @@ build_image() {
     local tags="${REGISTRY}/${REPO}:${tag_suffix}"
     if [ -n "$VERSION" ] && [ "$VERSION" != "local" ]; then
         tags="${tags},${REGISTRY}/${REPO}:${tag_suffix}-${VERSION}"
+    fi
+
+    # 添加华为云tags
+    if [ "$PUSH_HUAWEI" = "true" ]; then
+        if [ -n "$VERSION" ] && [ "$VERSION" != "local" ]; then
+            tags="${tags},${HUAWEI_REGISTRY}/${HUAWEI_ORG}/${HUAWEI_IMAGE}:${tag_suffix}-${VERSION}"
+        fi
+        tags="${tags},${HUAWEI_REGISTRY}/${HUAWEI_ORG}/${HUAWEI_IMAGE}:${tag_suffix}"
     fi
 
     local build_cmd=(
@@ -168,10 +182,17 @@ show_help() {
     echo "  OPENCLAW_VERSION  OpenClaw 版本/分支 (默认: latest)"
     echo "  PUSH              是否推送镜像 (默认: false)"
     echo ""
+    echo "  HUAWEI_REGISTRY   华为云 Registry 地址 (默认: swr.cn-north-4.myhuaweicloud.com)"
+    echo "  HUAWEI_ORG        华为云组织名称 (默认: openclaw-docker)"
+    echo "  HUAWEI_IMAGE      华为云镜像名称 (默认: openclaw)"
+    echo "  PUSH_HUAWEI       是否推送华为云 (默认: false)"
+    echo ""
     echo "示例:"
     echo "  $0                          # 本地构建所有镜像"
     echo "  $0 v2026.4.9                # 构建指定版本"
-    echo "  PUSH=true $0 v2026.4.9      # 构建并推送"
+    echo "  PUSH=true $0 v2026.4.9      # 构建并推送到 ghcr.io"
+    echo "  PUSH_HUAWEI=true $0 v2026.4.9  # 构建并推送到华为云"
+    echo "  PUSH=true PUSH_HUAWEI=true $0 v2026.4.9  # 构建并推送到两个registry"
     echo "  OPENCLAW_VERSION=v2026.4.9 $0  # 使用指定 OpenClaw 版本源码"
 }
 

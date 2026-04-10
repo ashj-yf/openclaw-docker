@@ -13,6 +13,22 @@
 
 所有镜像支持 `amd64` 和 `arm64` 架构。
 
+## 国内镜像
+
+华为云SWR镜像（国内用户推荐）：
+
+| 镜像 | 地址 |
+|------|------|
+| 主镜像 | `swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:latest` |
+| Sandbox | `swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:sandbox` |
+| Sandbox Browser | `swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:sandbox-browser` |
+| Sandbox Common | `swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:sandbox-common` |
+
+使用方法：
+```bash
+docker pull swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:latest
+```
+
 ## 快速开始
 
 ### 使用 Docker Compose
