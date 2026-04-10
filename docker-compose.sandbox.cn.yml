@@ -1,0 +1,15 @@
+# OpenClaw Sandbox - 基础沙盒容器（国内镜像）
+# 使用: docker compose -f docker-compose.sandbox.cn.yml up -d
+
+services:
+  sandbox:
+    image: swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:sandbox
+    container_name: openclaw-sandbox
+    hostname: sandbox
+    restart: unless-stopped
+    volumes:
+      - sandbox-home:/home/sandbox
+    working_dir: /home/sandbox
+
+volumes:
+  sandbox-home:

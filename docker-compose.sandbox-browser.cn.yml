@@ -1,0 +1,24 @@
+# OpenClaw Sandbox Browser - 带浏览器的沙盒（国内镜像）
+# 使用: docker compose -f docker-compose.sandbox-browser.cn.yml up -d
+#
+# 端口说明:
+#   - 9222: Chrome DevTools Protocol
+#   - 5900: VNC (传统 VNC 客户端)
+#   - 6080: noVNC (Web 浏览器访问 http://localhost:6080)
+
+services:
+  sandbox-browser:
+    image: swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:sandbox-browser
+    container_name: openclaw-sandbox-browser
+    hostname: sandbox-browser
+    restart: unless-stopped
+    ports:
+      - "9222:9222"
+      - "5900:5900"
+      - "6080:6080"
+    volumes:
+      - sandbox-browser-home:/home/sandbox
+    working_dir: /home/sandbox
+
+volumes:
+  sandbox-browser-home:
