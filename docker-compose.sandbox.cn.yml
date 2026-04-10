@@ -8,8 +8,6 @@ services:
     hostname: sandbox
     restart: unless-stopped
     volumes:
-      - sandbox-home:/home/sandbox
+      - ./sandbox-home:/home/sandbox
     working_dir: /home/sandbox
 
-volumes:
-  sandbox-home:

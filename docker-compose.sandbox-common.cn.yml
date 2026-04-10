@@ -15,8 +15,6 @@ services:
     hostname: sandbox-common
     restart: unless-stopped
     volumes:
-      - sandbox-common-home:/home/sandbox
+      - ./sandbox-common-home:/home/sandbox
     working_dir: /home/sandbox
 
-volumes:
-  sandbox-common-home:

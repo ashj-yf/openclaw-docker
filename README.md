@@ -166,6 +166,10 @@ OpenClaw 主程序，提供 AI 助手功能。
 - **端口**: 18789
 - **健康检查**: `/healthz`
 - **数据持久化**: `/app/data`, `/app/skills`
+- **配置目录**: `/home/node/.openclaw` (挂载到 `./config`)
+  - `openclaw.json` - 行为配置
+  - `agents/` - Agent 配置和认证信息
+  - `.env` - 环境变量（如 `OPENCLAW_GATEWAY_TOKEN`）
 
 ### Sandbox
 
