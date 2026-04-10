@@ -17,8 +17,6 @@ services:
       - "5900:5900"
       - "6080:6080"
     volumes:
-      - sandbox-browser-home:/home/sandbox
+      - ./sandbox-browser-home:/home/sandbox
     working_dir: /home/sandbox
 
-volumes:
-  sandbox-browser-home:

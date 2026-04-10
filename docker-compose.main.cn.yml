@@ -10,8 +10,9 @@ services:
     ports:
       - "18789:18789"
     volumes:
-      - openclaw-data:/app/data
-      - openclaw-skills:/app/skills
+      - ./data:/app/data
+      - ./skills:/app/skills
+      - ./config:/home/node/.openclaw
     environment:
       - NODE_ENV=production
     healthcheck:
@@ -21,6 +22,3 @@ services:
       start_period: 15s
       retries: 3
 
-volumes:
-  openclaw-data:
-  openclaw-skills:
