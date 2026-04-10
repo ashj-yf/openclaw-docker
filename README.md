@@ -4,6 +4,8 @@
 
 ## 镜像列表
 
+### 国际镜像（GitHub Container Registry）
+
 | 镜像 | Compose 文件 | 用途 | 大小 |
 |------|-------------|------|------|
 | `ghcr.io/ashj-yf/openclaw-docker:latest` | `docker-compose.main.yml` | OpenClaw 主程序 | ~1.2GB |
@@ -11,29 +13,24 @@
 | `ghcr.io/ashj-yf/openclaw-docker:sandbox-browser` | `docker-compose.sandbox-browser.yml` | 带浏览器的沙盒 | ~800MB |
 | `ghcr.io/ashj-yf/openclaw-docker:sandbox-common` | `docker-compose.sandbox-common.yml` | 完整开发环境沙盒 | ~2GB |
 
+### 国内镜像（华为云 SWR）
+
+| 镜像 | Compose 文件 | 用途 | 大小 |
+|------|-------------|------|------|
+| `swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:latest` | `docker-compose.main.cn.yml` | OpenClaw 主程序 | ~1.2GB |
+| `swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:sandbox` | `docker-compose.sandbox.cn.yml` | 基础沙盒容器 | ~200MB |
+| `swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:sandbox-browser` | `docker-compose.sandbox-browser.cn.yml` | 带浏览器的沙盒 | ~800MB |
+| `swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:sandbox-common` | `docker-compose.sandbox-common.cn.yml` | 完整开发环境沙盒 | ~2GB |
+
 所有镜像支持 `amd64` 和 `arm64` 架构。
-
-## 国内镜像
-
-华为云SWR镜像（国内用户推荐）：
-
-| 镜像 | 地址 |
-|------|------|
-| 主镜像 | `swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:latest` |
-| Sandbox | `swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:sandbox` |
-| Sandbox Browser | `swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:sandbox-browser` |
-| Sandbox Common | `swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:sandbox-common` |
-
-使用方法：
-```bash
-docker pull swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:latest
-```
 
 ## 快速开始
 
 ### 使用 Docker Compose
 
 每个镜像对应一个独立的 compose 文件，直接运行即可：
+
+**国际用户（GitHub Container Registry）**：
 
 ```bash
 # 启动主服务
@@ -49,20 +46,44 @@ docker compose -f docker-compose.sandbox-browser.yml up -d
 docker compose -f docker-compose.sandbox-common.yml up -d
 ```
 
+**国内用户（华为云 SWR，推荐）**：
+
+```bash
+# 启动主服务
+docker compose -f docker-compose.main.cn.yml up -d
+
+# 启动基础沙盒
+docker compose -f docker-compose.sandbox.cn.yml up -d
+
+# 启动带浏览器的沙盒
+docker compose -f docker-compose.sandbox-browser.cn.yml up -d
+
+# 启动完整开发环境沙盒
+docker compose -f docker-compose.sandbox-common.cn.yml up -d
+```
+
 ### 常用命令
 
 ```bash
 # 查看日志
 docker compose -f docker-compose.main.yml logs -f
+# 或国内镜像
+docker compose -f docker-compose.main.cn.yml logs -f
 
 # 停止服务
 docker compose -f docker-compose.main.yml down
+# 或国内镜像
+docker compose -f docker-compose.main.cn.yml down
 
 # 重启服务
 docker compose -f docker-compose.main.yml restart
+# 或国内镜像
+docker compose -f docker-compose.main.cn.yml restart
 ```
 
 ### 使用 Docker 命令
+
+**国际用户**：
 
 ```bash
 # 拉取镜像
@@ -73,6 +94,22 @@ docker run -d --name openclaw \
   -p 18789:18789 \
   -v openclaw-data:/app/data \
   ghcr.io/ashj-yf/openclaw-docker:latest
+
+# 查看日志
+docker logs -f openclaw
+```
+
+**国内用户**：
+
+```bash
+# 拉取镜像
+docker pull swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:latest
+
+# 运行容器
+docker run -d --name openclaw \
+  -p 18789:18789 \
+  -v openclaw-data:/app/data \
+  swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:latest
 
 # 查看日志
 docker logs -f openclaw

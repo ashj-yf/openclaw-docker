@@ -1,0 +1,26 @@
+# OpenClaw 主服务（国内镜像）
+# 使用: docker compose -f docker-compose.main.cn.yml up -d
+
+services:
+  openclaw:
+    image: swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:latest
+    container_name: openclaw
+    hostname: openclaw
+    restart: unless-stopped
+    ports:
+      - "18789:18789"
+    volumes:
+      - openclaw-data:/app/data
+      - openclaw-skills:/app/skills
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:18789/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 3m
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+
+volumes:
+  openclaw-data:
+  openclaw-skills:

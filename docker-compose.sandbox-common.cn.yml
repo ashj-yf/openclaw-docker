@@ -1,0 +1,22 @@
+# OpenClaw Sandbox Common - 完整开发环境沙盒（国内镜像）
+# 使用: docker compose -f docker-compose.sandbox-common.cn.yml up -d
+#
+# 包含:
+#   - Node.js, npm, pnpm
+#   - Python 3
+#   - Go, Rust
+#   - Bun
+#   - Homebrew
+
+services:
+  sandbox-common:
+    image: swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:sandbox-common
+    container_name: openclaw-sandbox-common
+    hostname: sandbox-common
+    restart: unless-stopped
+    volumes:
+      - sandbox-common-home:/home/sandbox
+    working_dir: /home/sandbox
+
+volumes:
+  sandbox-common-home:
