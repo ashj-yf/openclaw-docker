@@ -25,6 +25,9 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
+  HUAWEI_REGISTRY: swr.cn-north-4.myhuaweicloud.com
+  HUAWEI_ORG: openclaw-docker
+  HUAWEI_IMAGE: openclaw
   KEEP_VERSIONS: 5
 
 jobs:
@@ -50,6 +53,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Huawei Cloud SWR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.HUAWEI_REGISTRY }}
+          username: ${{ secrets.HUAWEI_REGISTRY_USERNAME }}
+          password: ${{ secrets.HUAWEI_REGISTRY_PASSWORD }}
+
       - name: Download OpenClaw source
         run: |
           curl -sL -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
@@ -68,6 +78,8 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository }}:${{ inputs.version }}
             ${{ env.REGISTRY }}/${{ github.repository }}:latest
+            ${{ env.HUAWEI_REGISTRY }}/${{ env.HUAWEI_ORG }}/${{ env.HUAWEI_IMAGE }}:${{ inputs.version }}
+            ${{ env.HUAWEI_REGISTRY }}/${{ env.HUAWEI_ORG }}/${{ env.HUAWEI_IMAGE }}:latest
           push: true
           provenance: false
 
@@ -93,6 +105,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Huawei Cloud SWR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.HUAWEI_REGISTRY }}
+          username: ${{ secrets.HUAWEI_REGISTRY_USERNAME }}
+          password: ${{ secrets.HUAWEI_REGISTRY_PASSWORD }}
+
       - name: Download OpenClaw source
         run: |
           curl -sL -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
@@ -111,6 +130,8 @@ jobs:
             ${{ env.REGISTRY }}/${{ github.repository }}:sandbox-${{ inputs.version }}
             ${{ env.REGISTRY }}/${{ github.repository }}:sandbox
             ${{ env.REGISTRY }}/${{ github.repository }}:bookworm-slim
+            ${{ env.HUAWEI_REGISTRY }}/${{ env.HUAWEI_ORG }}/${{ env.HUAWEI_IMAGE }}:sandbox-${{ inputs.version }}
+            ${{ env.HUAWEI_REGISTRY }}/${{ env.HUAWEI_ORG }}/${{ env.HUAWEI_IMAGE }}:sandbox
           push: true
           provenance: false
 
@@ -136,6 +157,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Huawei Cloud SWR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.HUAWEI_REGISTRY }}
+          username: ${{ secrets.HUAWEI_REGISTRY_USERNAME }}
+          password: ${{ secrets.HUAWEI_REGISTRY_PASSWORD }}
+
       - name: Download OpenClaw source
         run: |
           curl -sL -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
@@ -153,6 +181,8 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository }}:sandbox-browser-${{ inputs.version }}
             ${{ env.REGISTRY }}/${{ github.repository }}:sandbox-browser
+            ${{ env.HUAWEI_REGISTRY }}/${{ env.HUAWEI_ORG }}/${{ env.HUAWEI_IMAGE }}:sandbox-browser-${{ inputs.version }}
+            ${{ env.HUAWEI_REGISTRY }}/${{ env.HUAWEI_ORG }}/${{ env.HUAWEI_IMAGE }}:sandbox-browser
           push: true
           provenance: false
 
@@ -179,6 +209,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Huawei Cloud SWR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.HUAWEI_REGISTRY }}
+          username: ${{ secrets.HUAWEI_REGISTRY_USERNAME }}
+          password: ${{ secrets.HUAWEI_REGISTRY_PASSWORD }}
+
       - name: Download OpenClaw source
         run: |
           curl -sL -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
@@ -198,6 +235,8 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository }}:sandbox-common-${{ inputs.version }}
             ${{ env.REGISTRY }}/${{ github.repository }}:sandbox-common
+            ${{ env.HUAWEI_REGISTRY }}/${{ env.HUAWEI_ORG }}/${{ env.HUAWEI_IMAGE }}:sandbox-common-${{ inputs.version }}
+            ${{ env.HUAWEI_REGISTRY }}/${{ env.HUAWEI_ORG }}/${{ env.HUAWEI_IMAGE }}:sandbox-common
           push: true
           provenance: false
 
