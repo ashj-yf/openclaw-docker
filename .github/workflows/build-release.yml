@@ -305,24 +305,42 @@ jobs:
       - name: Translate release notes to Chinese
         id: translate
         run: |
+          echo "=== 检查翻译配置 ==="
+
           # 优先使用阿里云百炼大模型翻译
           if [ -n "${{ secrets.DASHSCOPE_API_KEY }}" ]; then
+            echo "使用阿里云百炼大模型翻译"
             export DASHSCOPE_API_KEY="${{ secrets.DASHSCOPE_API_KEY }}"
             if [ -n "${{ secrets.DASHSCOPE_MODEL }}" ]; then
               export DASHSCOPE_MODEL="${{ secrets.DASHSCOPE_MODEL }}"
             else
               export DASHSCOPE_MODEL="qwen-turbo"
             fi
-            python3 scripts/translate_with_bailian.py release_notes.txt en zh > translated_notes.txt
-            echo "使用阿里云百炼模型翻译完成"
+            echo "DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:0:8}..."
+            echo "DASHSCOPE_MODEL: ${DASHSCOPE_MODEL}"
+
+            if python3 scripts/translate_with_bailian.py release_notes.txt en zh > translated_notes.txt 2>&1; then
+              echo "✓ 翻译成功"
+            else
+              echo "✗ 翻译失败，检查错误日志"
+              cat translated_notes.txt
+              exit 1
+            fi
           elif [ -n "${{ secrets.ALIYUN_ACCESS_KEY_ID }}" ] && [ -n "${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}" ]; then
+            echo "使用阿里云机器翻译 API"
             export ALIYUN_ACCESS_KEY_ID="${{ secrets.ALIYUN_ACCESS_KEY_ID }}"
             export ALIYUN_ACCESS_KEY_SECRET="${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}"
-            python3 scripts/translate.py release_notes.txt en zh > translated_notes.txt
-            echo "使用阿里云机器翻译 API 翻译完成"
+
+            if python3 scripts/translate.py release_notes.txt en zh > translated_notes.txt 2>&1; then
+              echo "✓ 翻译成功"
+            else
+              echo "✗ 翻译失败，检查错误日志"
+              cat translated_notes.txt
+              exit 1
+            fi
           else
+            echo "⚠ 未配置翻译 API，使用原文"
             cat release_notes.txt > translated_notes.txt
-            echo "未配置翻译 API，使用原文"
           fi
           echo "translated_notes_file=translated_notes.txt" >> $GITHUB_OUTPUT
 
