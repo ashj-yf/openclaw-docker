@@ -21,8 +21,6 @@ services:
       - ./data:/app/data
       - ./skills:/app/skills
       - ./config:/home/node/.openclaw
-      - /etc/localtime:/etc/localtime:ro
-      - /etc/timezone:/etc/timezone:ro
     environment:
       - NODE_ENV=production
       - TZ=Asia/Shanghai
