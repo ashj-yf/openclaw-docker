@@ -119,11 +119,7 @@ jobs:
               '',
               '### 更新内容',
               '',
-              translatedNotes,
-              '',
-              '---',
-              '',
-              '**翻译状态**: 已完成\n**镜像构建**: 进行中...'
+              translatedNotes
             ].join('\n');
 
             await github.rest.repos.updateRelease({
