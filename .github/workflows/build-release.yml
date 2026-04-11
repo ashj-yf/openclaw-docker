@@ -30,23 +30,44 @@ jobs:
     outputs:
       release_id: ${{ steps.create.outputs.release_id }}
     steps:
-      - name: Create draft release
+      - name: Get or create release
         id: create
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const version = '${{ inputs.version }}';
-            const release = await github.rest.repos.createRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: version,
-              name: `OpenClaw ${version}（构建中...）`,
-              body: `## OpenClaw ${version}\n\n**状态**: 构建进行中...\n\n- [ ] 镜像构建\n- [ ] 翻译完成\n\n> 原文：[OpenClaw Official Release](${{ inputs.release_html_url }})`,
-              draft: false,
-              prerelease: false
-            });
-            return release.data.id.toString();
+            const releaseHtmlUrl = '${{ inputs.release_html_url }}';
+
+            // Try to get existing release first
+            let release;
+            try {
+              const existing = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: version
+              });
+              release = existing.data;
+              console.log(`Found existing release: ${release.id}`);
+            } catch (e) {
+              if (e.status === 404) {
+                // Release doesn't exist, create it
+                release = await github.rest.repos.createRelease({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  tag_name: version,
+                  name: `OpenClaw ${version}（构建中...）`,
+                  body: `## OpenClaw ${version}\n\n**状态**: 构建进行中...\n\n- [ ] 镜像构建\n- [ ] 翻译完成\n\n> 原文：[OpenClaw Official Release](${releaseHtmlUrl})`,
+                  draft: false,
+                  prerelease: false
+                });
+                console.log(`Created new release: ${release.id}`);
+              } else {
+                throw e;
+              }
+            }
+
+            return release.id.toString();
 
   # 构建主镜像
   build-main:
