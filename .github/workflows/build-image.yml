@@ -232,20 +232,83 @@ jobs:
           push: true
           provenance: false
 
-  # 汇总所有镜像 digest
+  # 汇总所有镜像 digest 并更新 release
   finalize-build:
     runs-on: ubuntu-latest
     needs: [build-main, build-sandbox, build-sandbox-browser, build-sandbox-common]
-    outputs:
-      main_digest: ${{ steps.set-digests.outputs.main_digest }}
-      sandbox_digest: ${{ steps.set-digests.outputs.sandbox_digest }}
-      sandbox_browser_digest: ${{ steps.set-digests.outputs.sandbox_browser_digest }}
-      sandbox_common_digest: ${{ steps.set-digests.outputs.sandbox_common_digest }}
     steps:
-      - name: Output digests
-        id: set-digests
-        run: |
-          echo "main_digest=${{ needs.build-main.outputs.digest }}" >> $GITHUB_OUTPUT
-          echo "sandbox_digest=${{ needs.build-sandbox.outputs.digest }}" >> $GITHUB_OUTPUT
-          echo "sandbox_browser_digest=${{ needs.build-sandbox-browser.outputs.digest }}" >> $GITHUB_OUTPUT
-          echo "sandbox_common_digest=${{ needs.build-sandbox-common.outputs.digest }}" >> $GITHUB_OUTPUT
+      - name: Update release with digests
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const version = '${{ inputs.version }}';
+            const digests = {
+              main: '${{ needs.build-main.outputs.digest }}',
+              sandbox: '${{ needs.build-sandbox.outputs.digest }}',
+              sandboxBrowser: '${{ needs.build-sandbox-browser.outputs.digest }}',
+              sandboxCommon: '${{ needs.build-sandbox-common.outputs.digest }}'
+            };
+
+            // Get existing release
+            let release;
+            try {
+              const existing = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: version
+              });
+              release = existing.data;
+            } catch (e) {
+              if (e.status === 404) {
+                console.log('Release not found, skipping digest update');
+                return;
+              }
+              throw e;
+            }
+
+            // Append digest section to existing body
+            let body = release.body || '';
+
+            const digestSection = [
+              '',
+              '---',
+              '',
+              '## 镜像信息',
+              '',
+              '所有镜像支持 `amd64` 和 `arm64` 架构。',
+              '',
+              '| 镜像 | 标签 | Digest |',
+              '|------|------|--------|',
+              `| 主镜像 | \`${version}\`, \`latest\` | \`${digests.main}\` |`,
+              `| Sandbox | \`sandbox-${version}\`, \`sandbox\` | \`${digests.sandbox}\` |`,
+              `| Sandbox Browser | \`sandbox-browser-${version}\`, \`sandbox-browser\` | \`${digests.sandboxBrowser}\` |`,
+              `| Sandbox Common | \`sandbox-common-${version}\`, \`sandbox-common\` | \`${digests.sandboxCommon}\` |`,
+              '',
+              '### 快速使用',
+              '',
+              '```bash',
+              '# 拉取主镜像',
+              `docker pull ghcr.io/${context.repo.owner}/${context.repo.repo}:latest`,
+              '',
+              '# 使用 docker-compose 启动',
+              `curl -O https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/main/docker-compose.main.yml`,
+              'docker compose -f docker-compose.main.yml up -d',
+              '```'
+            ].join('\n');
+
+            // Only append if digest section doesn't already exist
+            if (!body.includes('## 镜像信息')) {
+              body += digestSection;
+
+              await github.rest.repos.updateRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: release.id,
+                body: body
+              });
+
+              console.log('Release updated with digests');
+            } else {
+              console.log('Digest section already exists, skipping update');
+            }
