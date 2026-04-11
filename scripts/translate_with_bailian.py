@@ -114,11 +114,13 @@ def translate_with_dashscope(
     except Exception as e:
         raise Exception(f"请求失败：{e}")
 
-    # 解析响应
-    if result.get('status_code') == 200:
+    # 解析响应（百炼 API 响应格式）
+    # 成功时：{'output': {'choices': [{'message': {'content': '...', 'role': 'assistant'}}]}, 'usage': {...}, 'request_id': '...'}
+    # 失败时：{'output': None, 'request_id': '...', 'code': 'XXX', 'message': '...'}
+    if result.get('output') and result['output'].get('choices'):
         return result['output']['choices'][0]['message']['content']
     else:
-        code = result.get('code', 'Unknown')
+        code = result.get('code', result.get('status_code', 'Unknown'))
         message = result.get('message', result)
         raise Exception(f"翻译失败 (Code: {code}): {message}")
 
