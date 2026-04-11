@@ -49,7 +49,7 @@ jobs:
             echo "DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:0:8}..."
             echo "DASHSCOPE_MODEL: ${DASHSCOPE_MODEL}"
 
-            if python3 scripts/translate_with_bailian.py release_notes.txt en zh > translated_notes.txt 2>&1; then
+            if python3 scripts/translate_with_bailian.py release_notes.txt en zh > translated_notes.txt; then
               echo "✓ 翻译成功"
             else
               echo "✗ 翻译失败，检查错误日志"
@@ -61,7 +61,7 @@ jobs:
             export ALIYUN_ACCESS_KEY_ID="${{ secrets.ALIYUN_ACCESS_KEY_ID }}"
             export ALIYUN_ACCESS_KEY_SECRET="${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}"
 
-            if python3 scripts/translate.py release_notes.txt en zh > translated_notes.txt 2>&1; then
+            if python3 scripts/translate.py release_notes.txt en zh > translated_notes.txt; then
               echo "✓ 翻译成功"
             else
               echo "✗ 翻译失败，检查错误日志"
