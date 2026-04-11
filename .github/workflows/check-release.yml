@@ -58,3 +58,4 @@ jobs:
               "download_url": "${{ steps.upstream.outputs.download_url }}",
               "release_html_url": "${{ steps.upstream.outputs.release_html_url }}"
             }
+          ref: master
