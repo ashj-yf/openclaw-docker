@@ -73,16 +73,17 @@ def translate_with_dashscope(
 6. 不要添加任何原文没有的内容
 7. 直接输出翻译结果，不要添加解释"""
 
-    user_prompt = f"""请翻译以下内容：
+    user_prompt = f"""{system_prompt}
+
+请翻译以下内容：
 
 {text}"""
 
-    # 构建请求体
+    # 构建请求体（百炼 API 只支持 user/assistant role）
     request_body = {
         "model": model,
         "input": {
             "messages": [
-                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ]
         },
