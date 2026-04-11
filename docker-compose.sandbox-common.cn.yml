@@ -16,6 +16,8 @@ services:
     restart: unless-stopped
     volumes:
       - ./sandbox-common-home:/home/sandbox
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     working_dir: /home/sandbox
     networks:
       - openclaw-network
