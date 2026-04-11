@@ -2,8 +2,8 @@ name: Check OpenClaw Release
 
 on:
   schedule:
-    # 每小时检查一次
-    - cron: '0 * * * *'
+    # 每 30 分钟检查一次
+    - cron: '*/30 * * * *'
   workflow_dispatch: # 支持手动触发
 
 permissions:
