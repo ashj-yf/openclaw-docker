@@ -47,15 +47,29 @@ jobs:
       - name: Translate release notes to Chinese
         id: translate
         run: |
-          if [ -n "${{ secrets.ALIYUN_ACCESS_KEY_ID }}" ] && [ -n "${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}" ]; then
+          # 优先使用阿里云百炼大模型翻译
+          if [ -n "${{ secrets.DASHSCOPE_API_KEY }}" ]; then
+            export DASHSCOPE_API_KEY="${{ secrets.DASHSCOPE_API_KEY }}"
+            export DASHSCOPE_MODEL="${{ secrets.DASHSCOPE_MODEL:-qwen-turbo }}"
+
+            python3 scripts/translate_with_bailian.py release_notes.txt en zh > translated_notes.txt
+
+            echo "使用阿里云百炼模型翻译完成"
+
+          # 降级到阿里云机器翻译 API
+          elif [ -n "${{ secrets.ALIYUN_ACCESS_KEY_ID }}" ] && [ -n "${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}" ]; then
             export ALIYUN_ACCESS_KEY_ID="${{ secrets.ALIYUN_ACCESS_KEY_ID }}"
             export ALIYUN_ACCESS_KEY_SECRET="${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}"
 
             python3 scripts/translate.py release_notes.txt en zh > translated_notes.txt
+
+            echo "使用阿里云机器翻译 API 翻译完成"
           else
             echo "> 以下为官方原文（暂未翻译）：" > translated_notes.txt
             echo "" >> translated_notes.txt
             cat release_notes.txt >> translated_notes.txt
+
+            echo "未配置翻译 API，使用原文"
           fi
 
           echo "translated_notes_file=translated_notes.txt" >> $GITHUB_OUTPUT
