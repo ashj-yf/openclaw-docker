@@ -112,22 +112,12 @@ jobs:
               }
             }
 
-            const body = [
-              `## OpenClaw ${version}（中文版）`,
-              '',
-              `> 原文：[OpenClaw Official Release](${releaseHtmlUrl})`,
-              '',
-              '### 更新内容',
-              '',
-              translatedNotes
-            ].join('\n');
-
+            // Only update name, don't modify body in translate workflow
             await github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
               release_id: release.id,
-              name: `OpenClaw ${version}（中文版）`,
-              body: body
+              name: `OpenClaw ${version}（中文版）`
             });
 
-            console.log('Release updated with translation');
+            console.log('Release name updated');
