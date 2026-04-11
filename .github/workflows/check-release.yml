@@ -51,7 +51,7 @@ jobs:
         if: steps.check.outputs.has_new_release == 'true'
         uses: benc-uk/workflow-dispatch@v1
         with:
-          workflow: build-image.yml
+          workflow: build-release.yml
           inputs: |
             {
               "version": "${{ steps.upstream.outputs.version }}",
