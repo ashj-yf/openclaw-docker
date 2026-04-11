@@ -11,14 +11,8 @@ permissions:
   actions: write  # 触发其他 workflow
 
 jobs:
-  check-release:
+  check-and-trigger:
     runs-on: ubuntu-latest
-    outputs:
-      has_new_release: ${{ steps.check.outputs.has_new_release }}
-      version: ${{ steps.check.outputs.version }}
-      download_url: ${{ steps.check.outputs.download_url }}
-      release_html_url: ${{ steps.check.outputs.release_html_url }}
-
     steps:
       - name: Get OpenClaw latest release
         id: upstream
@@ -44,18 +38,30 @@ jobs:
             echo "Release ${VERSION} already exists in this repo, skipping."
           else
             echo "has_new_release=true" >> $GITHUB_OUTPUT
-            echo "New release ${VERSION} found, will trigger build."
+            echo "New release ${VERSION} found, will trigger build and translate."
           fi
 
       - name: Trigger build workflow
         if: steps.check.outputs.has_new_release == 'true'
         uses: benc-uk/workflow-dispatch@v1
         with:
-          workflow: build-release.yml
+          workflow: build-image.yml
           inputs: |
             {
               "version": "${{ steps.upstream.outputs.version }}",
               "download_url": "${{ steps.upstream.outputs.download_url }}",
+              "release_html_url": "${{ steps.upstream.outputs.release_html_url }}"
+            }
+          ref: master
+
+      - name: Trigger translate workflow
+        if: steps.check.outputs.has_new_release == 'true'
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: translate-release.yml
+          inputs: |
+            {
+              "version": "${{ steps.upstream.outputs.version }}",
               "release_html_url": "${{ steps.upstream.outputs.release_html_url }}"
             }
           ref: master

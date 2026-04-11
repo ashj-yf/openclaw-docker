@@ -1,0 +1,137 @@
+name: Translate Release Notes
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'OpenClaw version (e.g. v1.2.3)'
+        required: true
+      release_html_url:
+        description: 'Official release HTML URL'
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+
+jobs:
+  translate-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch release notes
+        id: fetch-notes
+        run: |
+          VERSION="${{ inputs.version }}"
+          response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/openclaw/openclaw/releases/tags/${VERSION}")
+          echo "$response" | jq -r '.body' > release_notes.txt
+          echo "release_notes_file=release_notes.txt" >> $GITHUB_OUTPUT
+
+      - name: Translate release notes to Chinese
+        id: translate
+        run: |
+          echo "=== 检查翻译配置 ==="
+
+          # 优先使用阿里云百炼大模型翻译
+          if [ -n "${{ secrets.DASHSCOPE_API_KEY }}" ]; then
+            echo "使用阿里云百炼大模型翻译"
+            export DASHSCOPE_API_KEY="${{ secrets.DASHSCOPE_API_KEY }}"
+            if [ -n "${{ secrets.DASHSCOPE_MODEL }}" ]; then
+              export DASHSCOPE_MODEL="${{ secrets.DASHSCOPE_MODEL }}"
+            else
+              export DASHSCOPE_MODEL="qwen-turbo"
+            fi
+            echo "DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:0:8}..."
+            echo "DASHSCOPE_MODEL: ${DASHSCOPE_MODEL}"
+
+            if python3 scripts/translate_with_bailian.py release_notes.txt en zh > translated_notes.txt 2>&1; then
+              echo "✓ 翻译成功"
+            else
+              echo "✗ 翻译失败，检查错误日志"
+              cat translated_notes.txt
+              exit 1
+            fi
+          elif [ -n "${{ secrets.ALIYUN_ACCESS_KEY_ID }}" ] && [ -n "${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}" ]; then
+            echo "使用阿里云机器翻译 API"
+            export ALIYUN_ACCESS_KEY_ID="${{ secrets.ALIYUN_ACCESS_KEY_ID }}"
+            export ALIYUN_ACCESS_KEY_SECRET="${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}"
+
+            if python3 scripts/translate.py release_notes.txt en zh > translated_notes.txt 2>&1; then
+              echo "✓ 翻译成功"
+            else
+              echo "✗ 翻译失败，检查错误日志"
+              cat translated_notes.txt
+              exit 1
+            fi
+          else
+            echo "⚠ 未配置翻译 API，使用原文"
+            cat release_notes.txt > translated_notes.txt
+          fi
+          echo "translated_notes_file=translated_notes.txt" >> $GITHUB_OUTPUT
+
+      - name: Update release with translation
+        id: update-release
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const version = '${{ inputs.version }}';
+            const releaseHtmlUrl = '${{ inputs.release_html_url }}';
+
+            const translatedNotes = fs.readFileSync('translated_notes.txt', 'utf8');
+
+            // Get existing release
+            let release;
+            try {
+              const existing = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: version
+              });
+              release = existing.data;
+            } catch (e) {
+              if (e.status === 404) {
+                // Create new release if not exists
+                release = await github.rest.repos.createRelease({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  tag_name: version,
+                  name: `OpenClaw ${version}（中文版）`,
+                  body: '',
+                  draft: false,
+                  prerelease: false
+                });
+              } else {
+                throw e;
+              }
+            }
+
+            const body = [
+              `## OpenClaw ${version}（中文版）`,
+              '',
+              `> 原文：[OpenClaw Official Release](${releaseHtmlUrl})`,
+              '',
+              '### 更新内容',
+              '',
+              translatedNotes,
+              '',
+              '---',
+              '',
+              '**翻译状态**: 已完成\n**镜像构建**: 进行中...'
+            ].join('\n');
+
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: release.id,
+              name: `OpenClaw ${version}（中文版）`,
+              body: body
+            });
+
+            console.log('Release updated with translation');
