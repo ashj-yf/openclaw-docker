@@ -270,6 +270,11 @@ jobs:
             // Append digest section to existing body
             let body = release.body || '';
 
+            // Remove any existing status/progress markers
+            body = body.replace(/\n*---\n[\s\S]*?## 镜像信息[\s\S]*?```/g, '');
+            body = body.replace(/\n+\*\*翻译状态\*\*:.*$/g, '');
+            body = body.replace(/\n+\*\*镜像构建\*\*:.*$/g, '');
+
             const digestSection = [
               '',
               '---',
