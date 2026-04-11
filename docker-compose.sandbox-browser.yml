@@ -24,6 +24,8 @@ services:
       - "6080:6080"
     volumes:
       - ./sandbox-browser-home:/home/sandbox
+    environment:
+      - TZ=Asia/Shanghai
     working_dir: /home/sandbox
     networks:
       - openclaw-network
