@@ -18,6 +18,8 @@ services:
       - "6080:6080"
     volumes:
       - ./sandbox-browser-home:/home/sandbox
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     working_dir: /home/sandbox
     networks:
       - openclaw-network
