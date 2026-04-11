@@ -50,7 +50,11 @@ jobs:
           # 优先使用阿里云百炼大模型翻译
           if [ -n "${{ secrets.DASHSCOPE_API_KEY }}" ]; then
             export DASHSCOPE_API_KEY="${{ secrets.DASHSCOPE_API_KEY }}"
-            export DASHSCOPE_MODEL="${{ secrets.DASHSCOPE_MODEL:-qwen-turbo }}"
+            if [ -n "${{ secrets.DASHSCOPE_MODEL }}" ]; then
+              export DASHSCOPE_MODEL="${{ secrets.DASHSCOPE_MODEL }}"
+            else
+              export DASHSCOPE_MODEL="qwen-turbo"
+            fi
 
             python3 scripts/translate_with_bailian.py release_notes.txt en zh > translated_notes.txt
 
