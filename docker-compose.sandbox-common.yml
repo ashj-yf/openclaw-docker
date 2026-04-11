@@ -24,6 +24,8 @@ services:
     restart: unless-stopped
     volumes:
       - ./sandbox-common-home:/home/sandbox
+    environment:
+      - TZ=Asia/Shanghai
     working_dir: /home/sandbox
     networks:
       - openclaw-network
