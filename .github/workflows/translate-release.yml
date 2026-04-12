@@ -5,10 +5,10 @@ on:
     inputs:
       version:
         description: 'OpenClaw version (e.g. v1.2.3)'
-        required: true
+        required: false
       release_html_url:
         description: 'Official release HTML URL'
-        required: true
+        required: false
 
 permissions:
   contents: write
@@ -17,8 +17,34 @@ env:
   IMAGE_NAME: ghcr.io/${{ github.repository }}
 
 jobs:
+  # 如果未提供参数，获取最新 release 信息
+  fetch-latest:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.fetch.outputs.version }}
+      release_html_url: ${{ steps.fetch.outputs.release_html_url }}
+    steps:
+      - name: Fetch latest release from openclaw/openclaw
+        id: fetch
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "使用手动输入的参数"
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "release_html_url=${{ inputs.release_html_url }}" >> $GITHUB_OUTPUT
+          else
+            echo "未提供参数，获取最新 release..."
+            response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/openclaw/openclaw/releases/latest")
+
+            echo "version=$(echo "$response" | jq -r '.tag_name')" >> $GITHUB_OUTPUT
+            echo "release_html_url=$(echo "$response" | jq -r '.html_url')" >> $GITHUB_OUTPUT
+
+            echo "获取到最新版本：$(echo "$response" | jq -r '.tag_name')"
+          fi
+
   translate-release:
     runs-on: ubuntu-latest
+    needs: fetch-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,7 +52,7 @@ jobs:
       - name: Fetch release notes
         id: fetch-notes
         run: |
-          VERSION="${{ inputs.version }}"
+          VERSION="${{ needs.fetch-latest.outputs.version }}"
           response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/openclaw/openclaw/releases/tags/${VERSION}")
           echo "$response" | jq -r '.body' > release_notes.txt
@@ -81,43 +107,53 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const version = '${{ inputs.version }}';
-            const releaseHtmlUrl = '${{ inputs.release_html_url }}';
+            const version = '${{ needs.fetch-latest.outputs.version }}';
+            const releaseHtmlUrl = '${{ needs.fetch-latest.outputs.release_html_url }}';
 
             const translatedNotes = fs.readFileSync('translated_notes.txt', 'utf8');
 
-            // Get existing release
-            let release;
+            // Release should already exist (created by check-release workflow)
+            let releaseId = null;
+
             try {
               const existing = await github.rest.repos.getReleaseByTag({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 tag: version
               });
-              release = existing.data;
+              releaseId = existing.data.id;
+              console.log(`Found existing release: ${existing.data.id}`);
             } catch (e) {
               if (e.status === 404) {
-                // Create new release if not exists
-                release = await github.rest.repos.createRelease({
+                // 理论上不应该发生，因为 check-release 已经创建了
+                console.log('Release not found, creating new one...');
+                const created = await github.rest.repos.createRelease({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   tag_name: version,
                   name: `OpenClaw ${version}（中文版）`,
-                  body: '',
+                  body: translatedNotes,
                   draft: false,
                   prerelease: false
                 });
+                releaseId = created.data.id;
+                console.log(`Created new release: ${created.data.id}`);
               } else {
                 throw e;
               }
             }
 
-            // Only update name, don't modify body in translate workflow
+            if (!releaseId) {
+              throw new Error('Release ID is null or undefined');
+            }
+
+            // Update release name and body with translation
             await github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              release_id: release.id,
-              name: `OpenClaw ${version}（中文版）`
+              release_id: releaseId,
+              name: `OpenClaw ${version}（中文版）`,
+              body: translatedNotes
             });
 
-            console.log('Release name updated');
+            console.log('Release updated with Chinese translation');
