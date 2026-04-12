@@ -150,7 +150,7 @@ def translate_long_text(
     source_lang: str = 'en',
     target_lang: str = 'zh',
     model: str = 'qwen-turbo',
-    max_chunk_size: int = 4000
+    max_chunk_size: int = 8000
 ) -> str:
     """
     翻译长文本（分段处理）
@@ -160,7 +160,23 @@ def translate_long_text(
         result = translate_with_dashscope(text, source_lang, target_lang, model)
         return fix_markdown_format(result)
 
-    # 按段落分割
+    # 按 Markdown 标题分割，保持结构完整
+    # 匹配 ### 标题
+    sections = re.split(r'(?=^### )', text, flags=re.MULTILINE)
+
+    if len(sections) <= 5:
+        # 如果章节不多，尝试按章节翻译
+        translated_sections = []
+        for i, section in enumerate(sections):
+            if not section or not section.strip():
+                continue
+            print(f'翻译章节 {i+1}/{len(sections)}...', file=sys.stderr)
+            translated = translate_with_dashscope(section, source_lang, target_lang, model)
+            translated_sections.append(fix_markdown_format(translated))
+            time.sleep(0.5)  # 避免 API 限流
+        return '\n\n'.join(translated_sections)
+
+    # 如果章节太多，回退到按段落分割
     paragraphs = text.split('\n\n')
     chunks = []
     current_chunk = ""
@@ -201,12 +217,11 @@ def translate_long_text(
             continue
         print(f'翻译分段 {i+1}/{len(chunks)}...', file=sys.stderr)
         translated = translate_with_dashscope(chunk, source_lang, target_lang, model)
-        translated_chunks.append(translated)
-        translated_chunks.append('')
+        translated_chunks.append(fix_markdown_format(translated))
         time.sleep(0.5)  # 避免 API 限流
 
     result = '\n\n'.join(translated_chunks)
-    return fix_markdown_format(result)
+    return result
 
 
 if __name__ == '__main__':
