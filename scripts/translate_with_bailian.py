@@ -271,8 +271,12 @@ def translate_text(
             translated_sections = []
 
             for i, section in enumerate(sections, 1):
-                print(f'翻译章节 {i}/{len(sections)}...', file=sys.stderr)
-                translated = translate_with_dashscope(section, source_lang, target_lang, model)
+                print(f'翻译章节 {i}/{len(sections)} ({len(section)} 字符)...', file=sys.stderr)
+                # 如果单个章节过大，递归处理
+                if len(section) > MAX_CHUNK_SIZE:
+                    translated = translate_text(section, source_lang, target_lang, model)
+                else:
+                    translated = translate_with_dashscope(section, source_lang, target_lang, model)
                 translated_sections.append(fix_markdown_format(translated))
                 time.sleep(API_RETRY_DELAY)
 
@@ -287,10 +291,7 @@ def translate_text(
 
     translated_chunks = []
     for i, chunk in enumerate(chunks, 1):
-        if not chunk or not chunk.strip():
-            print(f'跳过空段落 {i}/{len(chunks)}', file=sys.stderr)
-            continue
-        print(f'翻译段落 {i}/{len(chunks)}...', file=sys.stderr)
+        print(f'翻译段落 {i}/{len(chunks)} ({len(chunk)} 字符)...', file=sys.stderr)
         translated = translate_with_dashscope(chunk, source_lang, target_lang, model)
         translated_chunks.append(fix_markdown_format(translated))
         time.sleep(API_RETRY_DELAY)
