@@ -15,6 +15,7 @@ permissions:
 
 env:
   IMAGE_NAME: ghcr.io/${{ github.repository }}
+  DASHSCOPE_MODEL: ${{ vars.DASHSCOPE_MODEL || 'qwen-turbo' }}
 
 jobs:
   # 如果未提供参数，获取最新 release 信息
@@ -67,11 +68,7 @@ jobs:
           if [ -n "${{ secrets.DASHSCOPE_API_KEY }}" ]; then
             echo "使用阿里云百炼大模型翻译"
             export DASHSCOPE_API_KEY="${{ secrets.DASHSCOPE_API_KEY }}"
-            if [ -n "${{ secrets.DASHSCOPE_MODEL }}" ]; then
-              export DASHSCOPE_MODEL="${{ secrets.DASHSCOPE_MODEL }}"
-            else
-              export DASHSCOPE_MODEL="qwen-turbo"
-            fi
+            export DASHSCOPE_MODEL="${{ env.DASHSCOPE_MODEL }}"
             echo "DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:0:8}..."
             echo "DASHSCOPE_MODEL: ${DASHSCOPE_MODEL}"
 
