@@ -119,12 +119,18 @@ def translate_with_dashscope(
         raise Exception(f"请求失败：{e}")
 
     # 解析响应
-    if result.get('output') and result['output'].get('choices'):
-        return result['output']['choices'][0]['message']['content']
-    else:
-        code = result.get('code', 'Unknown')
-        message = result.get('message', str(result))
-        raise Exception(f"翻译失败 (Code: {code}): {message}")
+    if result.get('output'):
+        # 新格式：output.text
+        if result['output'].get('text'):
+            return result['output']['text']
+        # 旧格式：output.choices[0].message.content
+        if result['output'].get('choices'):
+            return result['output']['choices'][0]['message']['content']
+    
+    # 响应中没有有效输出，检查错误
+    code = result.get('code', 'Unknown')
+    message = result.get('message', str(result))
+    raise Exception(f"翻译失败 (Code: {code}): {message}")
 
 
 def build_translation_prompt(source_lang: str, target_lang: str) -> str:
