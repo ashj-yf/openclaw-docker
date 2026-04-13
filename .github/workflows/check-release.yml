@@ -7,8 +7,8 @@ on:
   workflow_dispatch: # 支持手动触发
 
 permissions:
-  contents: read
-  actions: write  # 触发其他 workflow
+  contents: write  # 创建 release
+  actions: write   # 触发其他 workflow
 
 jobs:
   check-and-trigger:
