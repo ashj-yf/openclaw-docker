@@ -57,6 +57,48 @@ jobs:
           response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/openclaw/openclaw/releases/tags/${VERSION}")
           echo "$response" | jq -r '.body' > release_notes.txt
+          
+          # 检测并移除重复内容（上游 release notes 有时会有重复）
+          python3 - << 'EOF'
+          import re
+
+          with open('release_notes.txt', 'r', encoding='utf-8') as f:
+              content = f.read()
+
+          # 查找重复模式：如果末尾有与开头相似的内容，移除重复部分
+          lines = content.split('\n')
+          
+          # 检查是否有两个 "## 变更" 或类似的重复标题
+          header_positions = []
+          for i, line in enumerate(lines):
+              if line.strip().startswith('## '):
+                  header_positions.append((i, line.strip()))
+          
+          # 如果找到重复的二级标题，尝试移除重复部分
+          if len(header_positions) >= 2:
+              # 检查是否有明显的重复（相同的标题出现两次）
+              headers = [h[1] for h in header_positions]
+              seen = {}
+              duplicate_start = None
+              
+              for idx, (pos, header) in enumerate(header_positions):
+                  if header in seen and duplicate_start is None:
+                      duplicate_start = pos
+                      break
+                  seen[header] = pos
+              
+              if duplicate_start:
+                  # 移除从重复位置开始的所有内容
+                  lines = lines[:duplicate_start]
+                  # 移除末尾的多余空行
+                  while lines and not lines[-1].strip():
+                      lines.pop()
+                  
+                  with open('release_notes.txt', 'w', encoding='utf-8') as f:
+                      f.write('\n'.join(lines) + '\n')
+                  print(f'已移除重复内容，从行 {duplicate_start} 开始截断')
+          EOF
+          
           echo "release_notes_file=release_notes.txt" >> $GITHUB_OUTPUT
 
       - name: Translate release notes to Chinese
