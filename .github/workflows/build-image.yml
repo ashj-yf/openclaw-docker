@@ -301,16 +301,14 @@ jobs:
             // Append digest section to existing body
             let body = release.body || '';
 
-            // Remove any existing status/progress markers
-            body = body.replace(/\n*---\n[\s\S]*?## 镜像信息[\s\S]*?```/g, '');
-            body = body.replace(/\n+\*\*翻译状态\*\*:.*$/g, '');
-            body = body.replace(/\n+\*\*镜像构建\*\*:.*$/g, '');
+            // Remove any existing digest section to avoid duplicates
+            body = body.replace(/\n+---\n+## 📦 镜像信息[\s\S]*$/g, '');
 
             const digestSection = [
               '',
               '---',
               '',
-              '## 镜像信息',
+              '## 📦 镜像信息',
               '',
               '所有镜像支持 `amd64` 和 `arm64` 架构。',
               '',
@@ -321,30 +319,28 @@ jobs:
               `| Sandbox Browser | \`sandbox-browser-${version}\`, \`sandbox-browser\` | \`${digests.sandboxBrowser}\` |`,
               `| Sandbox Common | \`sandbox-common-${version}\`, \`sandbox-common\` | \`${digests.sandboxCommon}\` |`,
               '',
-              '### 快速使用',
+              '### 🚀 快速使用',
               '',
               '```bash',
-              '# 拉取主镜像',
+              '# 拉取主镜像（国内）',
+              'docker pull swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:latest',
+              '',
+              '# 拉取主镜像（国际）',
               `docker pull ghcr.io/${context.repo.owner}/${context.repo.repo}:latest`,
               '',
               '# 使用 docker-compose 启动',
-              `curl -O https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/main/docker-compose.main.yml`,
-              'docker compose -f docker-compose.main.yml up -d',
+              `curl -O https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/main/docker-compose.main.cn.yml`,
+              'docker compose -f docker-compose.main.cn.yml up -d',
               '```'
             ].join('\n');
 
-            // Only append if digest section doesn't already exist
-            if (!body.includes('## 镜像信息')) {
-              body += digestSection;
+            body += digestSection;
 
-              await github.rest.repos.updateRelease({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                release_id: release.id,
-                body: body
-              });
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: release.id,
+              body: body
+            });
 
-              console.log('Release updated with digests');
-            } else {
-              console.log('Digest section already exists, skipping update');
-            }
+            console.log('Release updated with digests');
