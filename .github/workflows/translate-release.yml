@@ -148,6 +148,7 @@ jobs:
             const fs = require('fs');
             const version = '${{ needs.fetch-latest.outputs.version }}';
             const releaseHtmlUrl = '${{ needs.fetch-latest.outputs.release_html_url }}';
+            const officialReleaseUrl = 'https://github.com/openclaw/openclaw/releases';
 
             const translatedNotes = fs.readFileSync('translated_notes.txt', 'utf8');
 
@@ -186,13 +187,65 @@ jobs:
               throw new Error('Release ID is null or undefined');
             }
 
-            // Update release name and body with translation
+            // Build complete Chinese release body
+            const completeBody = [
+              '📦 **OpenClaw Docker 镜像已发布**',
+              '',
+              `> 🌐 [查看官方发布](${officialReleaseUrl}) | 🤖 本发布由 AI 自动翻译`,
+              '',
+              '---',
+              '',
+              translatedNotes.trim(),
+              '',
+              '---',
+              '',
+              '## 🚀 快速开始',
+              '',
+              '### 使用 Docker Compose（推荐）',
+              '',
+              '```bash',
+              '# 国内用户（华为云镜像）',
+              'curl -O https://raw.githubusercontent.com/ashj-yf/openclaw-docker/main/docker-compose.main.cn.yml',
+              'docker compose -f docker-compose.main.cn.yml up -d',
+              '',
+              '# 国际用户（GitHub Container Registry）',
+              'curl -O https://raw.githubusercontent.com/ashj-yf/openclaw-docker/main/docker-compose.main.yml',
+              'docker compose -f docker-compose.main.yml up -d',
+              '```',
+              '',
+              '### 使用 Docker 命令',
+              '',
+              '```bash',
+              '# 国内用户',
+              'docker pull swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:latest',
+              'docker run -d --name openclaw -p 18789:18789 -v openclaw-data:/app/data swr.cn-north-4.myhuaweicloud.com/openclaw-docker/openclaw:latest',
+              '',
+              '# 国际用户',
+              'docker pull ghcr.io/ashj-yf/openclaw-docker:latest',
+              'docker run -d --name openclaw -p 18789:18789 -v openclaw-data:/app/data ghcr.io/ashj-yf/openclaw-docker:latest',
+              '```',
+              '',
+              '---',
+              '',
+              '## 📖 文档',
+              '',
+              `- [完整文档](https://github.com/ashj-yf/openclaw-docker/blob/main/README.md)`,
+              `- [OpenClaw 官方文档](https://docs.openclaw.ai)`,
+              '',
+              '---',
+              '',
+              '> 💡 *镜像构建信息和 Digest 将由自动化工作流稍后添加...*',
+              '',
+              '*此版本由自动化工作流从 [openclaw/openclaw](https://github.com/openclaw/openclaw) 同步并翻译。*'
+            ].join('\n');
+
+            // Update release name and body with complete Chinese content
             await github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
               release_id: releaseId,
               name: `OpenClaw ${version}（中文版）`,
-              body: translatedNotes
+              body: completeBody
             });
 
-            console.log('Release updated with Chinese translation');
+            console.log('Release updated with complete Chinese translation');
