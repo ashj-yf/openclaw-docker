@@ -67,36 +67,72 @@ jobs:
 
           # 查找重复模式：如果末尾有与开头相似的内容，移除重复部分
           lines = content.split('\n')
-          
+
           # 检查是否有两个 "## 变更" 或类似的重复标题
           header_positions = []
           for i, line in enumerate(lines):
               if line.strip().startswith('## '):
                   header_positions.append((i, line.strip()))
-          
+
           # 如果找到重复的二级标题，尝试移除重复部分
           if len(header_positions) >= 2:
               # 检查是否有明显的重复（相同的标题出现两次）
               headers = [h[1] for h in header_positions]
               seen = {}
               duplicate_start = None
-              
+
               for idx, (pos, header) in enumerate(header_positions):
                   if header in seen and duplicate_start is None:
                       duplicate_start = pos
                       break
                   seen[header] = pos
-              
+
               if duplicate_start:
                   # 移除从重复位置开始的所有内容
                   lines = lines[:duplicate_start]
                   # 移除末尾的多余空行
                   while lines and not lines[-1].strip():
                       lines.pop()
-                  
+
                   with open('release_notes.txt', 'w', encoding='utf-8') as f:
                       f.write('\n'.join(lines) + '\n')
                   print(f'已移除重复内容，从行 {duplicate_start} 开始截断')
+                  return  # 已经处理过重复的 ## 标题，退出
+
+          # 如果没有找到 ## 级别的重复，检查 ### 级别的内容块重复
+          # 查找 "### 变更" 和 "### 修复" 这样的模式
+          h3_positions = []
+          for i, line in enumerate(lines):
+              if line.strip().startswith('### '):
+                  h3_positions.append((i, line.strip()))
+
+          if len(h3_positions) >= 4:  # 至少有两组 "### 变更" + "### 修复"
+              # 查找重复的 ### 标题模式
+              h3_headers = [h[1] for h in h3_positions]
+              
+              # 检查是否有 "### 变更" 或 "### 修复" 重复
+              change_indices = [i for i, h in enumerate(h3_headers) if h in ['### 变更', '### Changes']]
+              fix_indices = [i for i, h in enumerate(h3_headers) if h in ['### 修复', '### Fixes']]
+              
+              # 如果有多个"### 变更"或多个"### 修复"，说明有重复
+              if len(change_indices) >= 2 or len(fix_indices) >= 2:
+                  # 找到第二个主要部分的开始位置（第二个"### 变更"或"### 修复"）
+                  duplicate_start = None
+                  if len(change_indices) >= 2:
+                      duplicate_start = h3_positions[change_indices[1]][0]
+                  elif len(fix_indices) >= 2:
+                      duplicate_start = h3_positions[fix_indices[1]][0]
+                  
+                  if duplicate_start:
+                      # 移除从重复位置开始的所有内容
+                      lines = lines[:duplicate_start]
+                      # 移除末尾的多余空行
+                      while lines and not lines[-1].strip():
+                          lines.pop()
+
+                      with open('release_notes.txt', 'w', encoding='utf-8') as f:
+                          f.write('\n'.join(lines) + '\n')
+                      print(f'已移除 ### 级别的重复内容，从行 {duplicate_start} 开始截断')
           EOF
           
           echo "release_notes_file=release_notes.txt" >> $GITHUB_OUTPUT
