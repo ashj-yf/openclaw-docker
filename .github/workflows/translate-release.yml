@@ -61,6 +61,7 @@ jobs:
           # 检测并移除重复内容（上游 release notes 有时会有重复）
           python3 - << 'EOF'
           import re
+          import sys
 
           with open('release_notes.txt', 'r', encoding='utf-8') as f:
               content = f.read()
@@ -97,7 +98,7 @@ jobs:
                   with open('release_notes.txt', 'w', encoding='utf-8') as f:
                       f.write('\n'.join(lines) + '\n')
                   print(f'已移除重复内容，从行 {duplicate_start} 开始截断')
-                  return  # 已经处理过重复的 ## 标题，退出
+                  sys.exit(0)  # 已经处理过重复的 ## 标题，退出
 
           # 如果没有找到 ## 级别的重复，检查 ### 级别的内容块重复
           # 查找 "### 变更" 和 "### 修复" 这样的模式
