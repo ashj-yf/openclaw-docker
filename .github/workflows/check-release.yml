@@ -1,10 +1,10 @@
 name: Check OpenClaw Release
 
 on:
-  schedule:
-    # 每 30 分钟检查一次
-    - cron: '*/30 * * * *'
-  workflow_dispatch: # 支持手动触发
+  # schedule 已禁用，防止自动触发
+  # schedule:
+  #   - cron: '*/30 * * * *'
+  workflow_dispatch: # 仅支持手动触发
 
 permissions:
   contents: write  # 创建 release
