@@ -89,6 +89,12 @@ jobs:
           mkdir -p openclaw-src
           tar -xzf openclaw-source.tar.gz -C openclaw-src --strip-components=1
 
+      - name: Copy custom Dockerfiles to source directory
+        run: |
+          cp Dockerfile.sandbox openclaw-src/
+          cp Dockerfile.sandbox-browser openclaw-src/
+          cp Dockerfile.sandbox-common openclaw-src/
+
       - name: Build and push main image
         id: build-push
         uses: docker/build-push-action@v6
@@ -141,6 +147,12 @@ jobs:
             "${{ needs.fetch-latest.outputs.download_url }}" -o openclaw-source.tar.gz
           mkdir -p openclaw-src
           tar -xzf openclaw-source.tar.gz -C openclaw-src --strip-components=1
+
+      - name: Copy custom Dockerfiles to source directory
+        run: |
+          cp Dockerfile.sandbox openclaw-src/
+          cp Dockerfile.sandbox-browser openclaw-src/
+          cp Dockerfile.sandbox-common openclaw-src/
 
       - name: Build and push sandbox image
         id: build-push

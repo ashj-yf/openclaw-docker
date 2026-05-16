@@ -73,6 +73,17 @@ download_source() {
     log_info "源码下载完成"
 }
 
+# 复制自定义 Dockerfile
+copy_dockerfiles() {
+    log_info "复制自定义 Dockerfile 到源码目录..."
+
+    cp Dockerfile.sandbox openclaw-src/
+    cp Dockerfile.sandbox-browser openclaw-src/
+    cp Dockerfile.sandbox-common openclaw-src/
+
+    log_info "Dockerfile 复制完成"
+}
+
 # 构建镜像
 build_image() {
     local name="$1"
@@ -128,6 +139,7 @@ main() {
 
     check_dependencies
     download_source
+    copy_dockerfiles
     echo ""
 
     # 构建顺序：sandbox -> sandbox-common（依赖 sandbox）
