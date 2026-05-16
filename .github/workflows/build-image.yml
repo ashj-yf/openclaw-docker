@@ -89,12 +89,6 @@ jobs:
           mkdir -p openclaw-src
           tar -xzf openclaw-source.tar.gz -C openclaw-src --strip-components=1
 
-      - name: Copy custom Dockerfiles to source directory
-        run: |
-          cp Dockerfile.sandbox openclaw-src/
-          cp Dockerfile.sandbox-browser openclaw-src/
-          cp Dockerfile.sandbox-common openclaw-src/
-
       - name: Build and push main image
         id: build-push
         uses: docker/build-push-action@v6
@@ -111,199 +105,18 @@ jobs:
           push: true
           provenance: false
 
-  # 构建 Sandbox 镜像
-  build-sandbox:
-    needs: fetch-latest
-    runs-on: ubuntu-latest
-    outputs:
-      digest: ${{ steps.build-push.outputs.digest }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Log in to Huawei Cloud SWR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.HUAWEI_REGISTRY }}
-          username: ${{ secrets.HUAWEI_REGISTRY_USERNAME }}
-          password: ${{ secrets.HUAWEI_REGISTRY_PASSWORD }}
-
-      - name: Download OpenClaw source
-        run: |
-          curl -sL -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "${{ needs.fetch-latest.outputs.download_url }}" -o openclaw-source.tar.gz
-          mkdir -p openclaw-src
-          tar -xzf openclaw-source.tar.gz -C openclaw-src --strip-components=1
-
-      - name: Copy custom Dockerfiles to source directory
-        run: |
-          cp Dockerfile.sandbox openclaw-src/
-          cp Dockerfile.sandbox-browser openclaw-src/
-          cp Dockerfile.sandbox-common openclaw-src/
-
-      - name: Build and push sandbox image
-        id: build-push
-        uses: docker/build-push-action@v6
-        with:
-          context: openclaw-src
-          file: openclaw-src/Dockerfile.sandbox
-          platforms: linux/amd64,linux/arm64
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository }}:sandbox-${{ needs.fetch-latest.outputs.version }}
-            ${{ env.REGISTRY }}/${{ github.repository }}:sandbox
-            ${{ env.HUAWEI_REGISTRY }}/${{ env.HUAWEI_ORG }}/${{ env.HUAWEI_IMAGE }}:sandbox-${{ needs.fetch-latest.outputs.version }}
-            ${{ env.HUAWEI_REGISTRY }}/${{ env.HUAWEI_ORG }}/${{ env.HUAWEI_IMAGE }}:sandbox
-          push: true
-          provenance: false
-
-  # 构建 Sandbox Browser 镜像
-  build-sandbox-browser:
-    needs: fetch-latest
-    runs-on: ubuntu-latest
-    outputs:
-      digest: ${{ steps.build-push.outputs.digest }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Log in to Huawei Cloud SWR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.HUAWEI_REGISTRY }}
-          username: ${{ secrets.HUAWEI_REGISTRY_USERNAME }}
-          password: ${{ secrets.HUAWEI_REGISTRY_PASSWORD }}
-
-      - name: Download OpenClaw source
-        run: |
-          curl -sL -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "${{ needs.fetch-latest.outputs.download_url }}" -o openclaw-source.tar.gz
-          mkdir -p openclaw-src
-          tar -xzf openclaw-source.tar.gz -C openclaw-src --strip-components=1
-
-      - name: Copy custom Dockerfiles to source directory
-        run: |
-          cp Dockerfile.sandbox openclaw-src/
-          cp Dockerfile.sandbox-browser openclaw-src/
-          cp Dockerfile.sandbox-common openclaw-src/
-
-      - name: Build and push sandbox-browser image
-        id: build-push
-        uses: docker/build-push-action@v6
-        with:
-          context: openclaw-src
-          file: openclaw-src/Dockerfile.sandbox-browser
-          platforms: linux/amd64,linux/arm64
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository }}:sandbox-browser-${{ needs.fetch-latest.outputs.version }}
-            ${{ env.REGISTRY }}/${{ github.repository }}:sandbox-browser
-            ${{ env.HUAWEI_REGISTRY }}/${{ env.HUAWEI_ORG }}/${{ env.HUAWEI_IMAGE }}:sandbox-browser-${{ needs.fetch-latest.outputs.version }}
-            ${{ env.HUAWEI_REGISTRY }}/${{ env.HUAWEI_ORG }}/${{ env.HUAWEI_IMAGE }}:sandbox-browser
-          push: true
-          provenance: false
-
-  # 构建 Sandbox Common 镜像
-  build-sandbox-common:
-    runs-on: ubuntu-latest
-    needs: [build-sandbox, fetch-latest]
-    outputs:
-      digest: ${{ steps.build-push.outputs.digest }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Log in to Huawei Cloud SWR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.HUAWEI_REGISTRY }}
-          username: ${{ secrets.HUAWEI_REGISTRY_USERNAME }}
-          password: ${{ secrets.HUAWEI_REGISTRY_PASSWORD }}
-
-      - name: Download OpenClaw source
-        run: |
-          curl -sL -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "${{ needs.fetch-latest.outputs.download_url }}" -o openclaw-source.tar.gz
-          mkdir -p openclaw-src
-          tar -xzf openclaw-source.tar.gz -C openclaw-src --strip-components=1
-
-      - name: Copy custom Dockerfiles to source directory
-        run: |
-          cp Dockerfile.sandbox openclaw-src/
-          cp Dockerfile.sandbox-browser openclaw-src/
-          cp Dockerfile.sandbox-common openclaw-src/
-
-      - name: Build and push sandbox-common image
-        id: build-push
-        uses: docker/build-push-action@v6
-        with:
-          context: openclaw-src
-          file: openclaw-src/Dockerfile.sandbox-common
-          platforms: linux/amd64,linux/arm64
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository }}:bookworm-slim
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository }}:sandbox-common-${{ needs.fetch-latest.outputs.version }}
-            ${{ env.REGISTRY }}/${{ github.repository }}:sandbox-common
-            ${{ env.HUAWEI_REGISTRY }}/${{ env.HUAWEI_ORG }}/${{ env.HUAWEI_IMAGE }}:sandbox-common-${{ needs.fetch-latest.outputs.version }}
-            ${{ env.HUAWEI_REGISTRY }}/${{ env.HUAWEI_ORG }}/${{ env.HUAWEI_IMAGE }}:sandbox-common
-          push: true
-          provenance: false
-
-  # 汇总所有镜像 digest 并更新 release
+  # 更新 release
   finalize-build:
     runs-on: ubuntu-latest
-    needs: [build-main, build-sandbox, build-sandbox-browser, build-sandbox-common, fetch-latest]
+    needs: [build-main, fetch-latest]
     steps:
-      - name: Update release with digests
+      - name: Update release with digest
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const version = '${{ needs.fetch-latest.outputs.version }}';
-            const digests = {
-              main: '${{ needs.build-main.outputs.digest }}',
-              sandbox: '${{ needs.build-sandbox.outputs.digest }}',
-              sandboxBrowser: '${{ needs.build-sandbox-browser.outputs.digest }}',
-              sandboxCommon: '${{ needs.build-sandbox-common.outputs.digest }}'
-            };
+            const digest = '${{ needs.build-main.outputs.digest }}';
 
             // Get existing release
             let release;
@@ -334,14 +147,11 @@ jobs:
               '',
               '## 📦 镜像信息',
               '',
-              '所有镜像支持 `amd64` 和 `arm64` 架构。',
+              '镜像支持 `amd64` 和 `arm64` 架构。',
               '',
               '| 镜像 | 标签 | Digest |',
               '|------|------|--------|',
-              `| 主镜像 | \`${version}\`, \`latest\` | \`${digests.main}\` |`,
-              `| Sandbox | \`sandbox-${version}\`, \`sandbox\` | \`${digests.sandbox}\` |`,
-              `| Sandbox Browser | \`sandbox-browser-${version}\`, \`sandbox-browser\` | \`${digests.sandboxBrowser}\` |`,
-              `| Sandbox Common | \`sandbox-common-${version}\`, \`sandbox-common\` | \`${digests.sandboxCommon}\` |`,
+              `| 主镜像 | \`${version}\`, \`latest\` | \`${digest}\` |`,
               '',
               '### 🚀 快速使用',
               '',
@@ -367,4 +177,4 @@ jobs:
               body: body
             });
 
-            console.log('Release updated with digests');
+            console.log('Release updated with digest');

@@ -73,17 +73,6 @@ download_source() {
     log_info "源码下载完成"
 }
 
-# 复制自定义 Dockerfile
-copy_dockerfiles() {
-    log_info "复制自定义 Dockerfile 到源码目录..."
-
-    cp Dockerfile.sandbox openclaw-src/
-    cp Dockerfile.sandbox-browser openclaw-src/
-    cp Dockerfile.sandbox-common openclaw-src/
-
-    log_info "Dockerfile 复制完成"
-}
-
 # 构建镜像
 build_image() {
     local name="$1"
@@ -132,49 +121,24 @@ main() {
     log_info "OpenClaw Docker 本地构建"
     log_info "Registry: ${REGISTRY}"
     log_info "Repository: ${REPO}"
-    log_info "Tag: ${TAG}"
     log_info "Platforms: ${PLATFORMS}"
     log_info "Version: ${VERSION}"
     echo ""
 
     check_dependencies
     download_source
-    copy_dockerfiles
     echo ""
 
-    # 构建顺序：sandbox -> sandbox-common（依赖 sandbox）
-    log_info "开始构建镜像..."
+    log_info "开始构建主镜像..."
     echo ""
 
-    # 1. 构建主镜像
     build_image "Main" "Dockerfile" "latest" "OPENCLAW_INSTALL_BROWSER=1"
     echo ""
 
-    # 2. 构建 sandbox
-    build_image "Sandbox" "Dockerfile.sandbox" "sandbox"
-    echo ""
-
-    # 3. 构建 sandbox-browser
-    build_image "Sandbox Browser" "Dockerfile.sandbox-browser" "sandbox-browser"
-    echo ""
-
-    # 4. 构建 sandbox-common（依赖 sandbox）
-    # 先 tag sandbox 为 bookworm-slim
-    docker buildx imagetools create \
-        --tag "${REGISTRY}/${REPO}:bookworm-slim" \
-        "${REGISTRY}/${REPO}:sandbox" 2>/dev/null || true
-
-    build_image "Sandbox Common" "Dockerfile.sandbox-common" "sandbox-common" \
-        "BASE_IMAGE=${REGISTRY}/${REPO}:bookworm-slim"
-    echo ""
-
-    log_info "所有镜像构建完成！"
+    log_info "镜像构建完成！"
     echo ""
     log_info "镜像列表："
     echo "  - ${REGISTRY}/${REPO}:latest"
-    echo "  - ${REGISTRY}/${REPO}:sandbox"
-    echo "  - ${REGISTRY}/${REPO}:sandbox-browser"
-    echo "  - ${REGISTRY}/${REPO}:sandbox-common"
 }
 
 # 使用帮助
@@ -189,7 +153,6 @@ show_help() {
     echo "环境变量:"
     echo "  IMAGE_REGISTRY    Registry 地址 (默认: ghcr.io)"
     echo "  IMAGE_REPO        仓库名称 (默认: ashj-yf/openclaw-docker)"
-    echo "  IMAGE_TAG         镜像标签 (默认: latest)"
     echo "  PLATFORMS         构建平台 (默认: linux/amd64,linux/arm64)"
     echo "  OPENCLAW_VERSION  OpenClaw 版本/分支 (默认: latest)"
     echo "  PUSH              是否推送镜像 (默认: false)"
@@ -200,11 +163,10 @@ show_help() {
     echo "  PUSH_HUAWEI       是否推送华为云 (默认: false)"
     echo ""
     echo "示例:"
-    echo "  $0                          # 本地构建所有镜像"
+    echo "  $0                          # 本地构建镜像"
     echo "  $0 v2026.4.9                # 构建指定版本"
     echo "  PUSH=true $0 v2026.4.9      # 构建并推送到 ghcr.io"
     echo "  PUSH_HUAWEI=true $0 v2026.4.9  # 构建并推送到华为云"
-    echo "  PUSH=true PUSH_HUAWEI=true $0 v2026.4.9  # 构建并推送到两个registry"
     echo "  OPENCLAW_VERSION=v2026.4.9 $0  # 使用指定 OpenClaw 版本源码"
 }
 
